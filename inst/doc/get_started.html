@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Getting started with scholid</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Getting started with scholid</h1>
+
+
+
+<p><code>scholid</code> is a lightweight, dependency-free (base R only)
+toolkit for working with scholarly and academic identifiers. It provides
+small, well-tested helpers to detect, normalize, classify, and extract
+common identifier strings.</p>
+<p>This vignette introduces the interface and typical workflows for
+mixed, messy identifier data.</p>
+<div id="installation" class="section level2">
+<h2>Installation</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;scholid&quot;</span>)</span></code></pre></div>
+</div>
+<div id="interface" class="section level2">
+<h2>Interface</h2>
+<p><code>scholid</code> exposes a small set of user-facing functions
+that operate consistently across identifier types:</p>
+<ul>
+<li><code>scholid_types()</code> lists supported identifier types.</li>
+<li><code>is_scholid(x, type)</code> checks whether values match the
+identifier type.</li>
+<li><code>normalize_scholid(x, type)</code> returns canonical identifier
+strings.</li>
+<li><code>extract_scholid(text, type)</code> extracts identifiers from
+free text.</li>
+<li><code>classify_scholid(x)</code> guesses the identifier type per
+element.</li>
+<li><code>detect_scholid_type(x)</code> detects identifier types from
+canonical or wrapped input values (e.g., URLs or labels).</li>
+</ul>
+<p>These generic helpers dispatch internally to type-specific
+implementations such as <code>is_doi()</code>,
+<code>normalize_orcid()</code>, and <code>extract_isbn()</code>.</p>
+</div>
+<div id="supported-identifier-types" class="section level2">
+<h2>Supported identifier types</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">scholid_types</span>()</span></code></pre></div>
+<pre><code>## [1] &quot;arxiv&quot; &quot;doi&quot;   &quot;isbn&quot;  &quot;issn&quot;  &quot;orcid&quot; &quot;pmcid&quot; &quot;pmid&quot;</code></pre>
+</div>
+<div id="detect-is_scholid" class="section level2">
+<h2>Detect: <code>is_scholid()</code></h2>
+<p><code>is_scholid()</code> checks whether each value matches a
+specific identifier type. It is vectorized and preserves missing
+values.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>    <span class="st">&quot;10.1000/182&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    <span class="st">&quot;not a doi&quot;</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>    <span class="cn">NA</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">is_scholid</span>(</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>    <span class="at">x    =</span> x,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>    <span class="at">type =</span> <span class="st">&quot;doi&quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## [1]  TRUE FALSE    NA</code></pre>
+</div>
+<div id="normalize-normalize_scholid" class="section level2">
+<h2>Normalize: <code>normalize_scholid()</code></h2>
+<p>Normalization removes common wrappers and enforces a canonical
+representation. This is particularly useful when identifiers are stored
+as URLs or prefixed labels.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="st">&quot;https://doi.org/10.1000/182.&quot;</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="st">&quot;doi:10.1000/182&quot;</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="st">&quot; 10.1000/182 &quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">normalize_scholid</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>    <span class="at">x    =</span> x, </span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>    <span class="at">type =</span> <span class="st">&quot;doi&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## [1] &quot;10.1000/182&quot; &quot;10.1000/182&quot; &quot;10.1000/182&quot;</code></pre>
+<p>For ORCID iDs, normalization removes URL prefixes and enforces
+hyphenated grouping.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="st">&quot;https://orcid.org/0000-0002-1825-0097&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="st">&quot;0000000218250097&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">normalize_scholid</span>(</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="at">x    =</span> x,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>    <span class="at">type =</span> <span class="st">&quot;orcid&quot;</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## [1] &quot;0000-0002-1825-0097&quot; &quot;0000-0002-1825-0097&quot;</code></pre>
+<p>Normalization is designed to be predictable: - <code>NA</code> input
+stays <code>NA</code>. - Invalid inputs typically become
+<code>NA_character_</code>.</p>
+</div>
+<div id="extract-extract_scholid" class="section level2">
+<h2>Extract: <code>extract_scholid()</code></h2>
+<p>Extraction is for harvesting identifiers from unstructured text. The
+result is a list with one element per input element. Each element is a
+character vector of matches (possibly empty).</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>txt <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="st">&quot;See https://doi.org/10.1000/182 and doi:10.5555/12345678.&quot;</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="st">&quot;No identifier here.&quot;</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="cn">NA</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">extract_scholid</span>(</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>    <span class="at">text =</span> txt,</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>    <span class="at">type =</span> <span class="st">&quot;doi&quot;</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## [[1]]
+## [1] &quot;10.1000/182&quot;       &quot;10.5555/12345678.&quot;
+## 
+## [[2]]
+## character(0)
+## 
+## [[3]]
+## character(0)</code></pre>
+<p>The list return type is intentional: a single text string can contain
+multiple identifiers.</p>
+</div>
+<div id="classify-classify_scholid" class="section level2">
+<h2>Classify: <code>classify_scholid()</code></h2>
+<p><code>classify_scholid()</code> returns the best-guess identifier
+type per element for mixed identifier columns. Classification is based
+on the set of available <code>is_&lt;type&gt;()</code> checks and the
+precedence order defined by <code>scholid_types()</code>.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="st">&quot;10.1000/182&quot;</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="st">&quot;0000-0002-1825-0097&quot;</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="st">&quot;PMC12345&quot;</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="st">&quot;2101.00001v2&quot;</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="st">&quot;not an id&quot;</span>,</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="cn">NA</span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>)</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">classify_scholid</span>(<span class="at">x =</span> x)</span></code></pre></div>
+<pre><code>## [1] &quot;doi&quot;   &quot;orcid&quot; &quot;pmcid&quot; &quot;arxiv&quot; NA      NA</code></pre>
+<div id="normalization-classification-in-messy-data" class="section level3">
+<h3>Normalization + classification in messy data</h3>
+<p>Many identifiers appear wrapped (URLs, prefixes, trailing
+punctuation). Classification is strict and expects canonical strings. A
+common pattern is:</p>
+<ol style="list-style-type: decimal">
+<li>Extract identifiers from text.</li>
+<li>Normalize extracted values.</li>
+<li>Classify and/or validate.</li>
+</ol>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>txt <span class="ot">&lt;-</span> <span class="st">&quot;Read https://doi.org/10.1000/182 (and ORCID 0000-0002-1825-0097).&quot;</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>dois <span class="ot">&lt;-</span> scholid<span class="sc">::</span><span class="fu">extract_scholid</span>(txt, <span class="st">&quot;doi&quot;</span>)[[<span class="dv">1</span>]]</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>orcids <span class="ot">&lt;-</span> scholid<span class="sc">::</span><span class="fu">extract_scholid</span>(txt, <span class="st">&quot;orcid&quot;</span>)[[<span class="dv">1</span>]]</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>dois_n <span class="ot">&lt;-</span> scholid<span class="sc">::</span><span class="fu">normalize_scholid</span>(dois, <span class="st">&quot;doi&quot;</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>orcids_n <span class="ot">&lt;-</span> scholid<span class="sc">::</span><span class="fu">normalize_scholid</span>(orcids, <span class="st">&quot;orcid&quot;</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">classify_scholid</span>(<span class="fu">c</span>(dois_n, orcids_n))</span></code></pre></div>
+<pre><code>## [1] &quot;doi&quot;   &quot;orcid&quot;</code></pre>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">is_scholid</span>(dois_n, <span class="st">&quot;doi&quot;</span>)</span></code></pre></div>
+<pre><code>## [1] TRUE</code></pre>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">is_scholid</span>(orcids_n, <span class="st">&quot;orcid&quot;</span>)</span></code></pre></div>
+<pre><code>## [1] TRUE</code></pre>
+</div>
+</div>
+<div id="detect-detect_scholid_type" class="section level2">
+<h2>Detect: <code>detect_scholid_type()</code></h2>
+<p><code>detect_scholid_type()</code> performs best-effort type
+detection for mixed, messy identifier input. In contrast to
+<code>classify_scholid()</code>, detection also recognizes common
+wrapped forms such as URLs and prefixed labels (e.g., <code>doi:</code>,
+<code>https://orcid.org/</code>, <code>arXiv:</code>,
+<code>PMID:</code>).</p>
+<p>Detection is useful when working with raw data where identifiers may
+not yet be normalized.</p>
+<p>For example, wrapped identifiers are not classified strictly:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>  <span class="st">&quot;https://doi.org/10.1000/182&quot;</span>,</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>  <span class="st">&quot;ORCID: 0000-0002-1825-0097&quot;</span>,</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>  <span class="st">&quot;arXiv:2101.00001&quot;</span>,</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>  <span class="st">&quot;PMID: 12345&quot;</span>,</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>  <span class="st">&quot;not an id&quot;</span></span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>)</span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">classify_scholid</span>(x)</span></code></pre></div>
+<pre><code>## [1] NA NA NA NA NA</code></pre>
+<p>However, they can be detected directly:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">detect_scholid_type</span>(x)</span></code></pre></div>
+<pre><code>## [1] &quot;doi&quot;   &quot;orcid&quot; &quot;arxiv&quot; &quot;pmid&quot;  NA</code></pre>
+<p>Whitespace and minor formatting irregularities are handled
+conservatively:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">detect_scholid_type</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>  <span class="fu">c</span>(</span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>    <span class="st">&quot; 0000-0002-1825-0097 &quot;</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>    <span class="st">&quot; 10.1000/182 &quot;</span>,</span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a>    <span class="st">&quot;ISSN 0317-8471&quot;</span></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a>  )</span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## [1] &quot;orcid&quot; &quot;doi&quot;   &quot;issn&quot;</code></pre>
+<p><code>detect_scholid_type()</code> does not modify values. Once the
+identifier type is known, use <code>normalize_scholid()</code> to
+convert to canonical form and <code>is_scholid()</code> for strict
+validation.</p>
+<p>A typical workflow for messy data is:</p>
+<ol style="list-style-type: decimal">
+<li>Detect identifier types.</li>
+<li>Normalize by detected type.</li>
+<li>Validate canonical identifiers.</li>
+</ol>
+<p>This separation keeps detection permissive and normalization
+predictable, while preserving strict validation where needed.</p>
+</div>
+<div id="design-notes" class="section level2">
+<h2>Design notes</h2>
+<p><code>scholid</code> is intentionally small and conservative:</p>
+<ul>
+<li>It uses base R only at runtime.</li>
+<li>Functions are vectorized and return stable types.</li>
+<li>Type-specific logic is kept in small <code>is_*()</code>,
+<code>normalize_*()</code>, and <code>extract_*()</code> helpers.</li>
+<li>The package is designed to be a low-level building block for other
+packages and for workflows.</li>
+</ul>
+</div>
+<div id="session-information" class="section level2">
+<h2>Session information</h2>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div>
+<pre><code>## R version 4.5.2 (2025-10-31)
+## Platform: x86_64-pc-linux-gnu
+## Running under: Ubuntu 22.04.5 LTS
+## 
+## Matrix products: default
+## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.10.0 
+## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.10.0  LAPACK version 3.10.0
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=de_AT.UTF-8        LC_COLLATE=C              
+##  [5] LC_MONETARY=de_AT.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=de_AT.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=de_AT.UTF-8 LC_IDENTIFICATION=C       
+## 
+## time zone: Europe/Vienna
+## tzcode source: system (glibc)
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## loaded via a namespace (and not attached):
+##  [1] digest_0.6.39     R6_2.6.1          fastmap_1.2.0     xfun_0.56        
+##  [5] cachem_1.1.0      knitr_1.51        htmltools_0.5.9   rmarkdown_2.30   
+##  [9] lifecycle_1.0.5   cli_3.6.5         scholid_0.1.0     sass_0.4.10      
+## [13] jquerylib_0.1.4   compiler_4.5.2    rstudioapi_0.18.0 tools_4.5.2      
+## [17] evaluate_1.0.5    bslib_0.10.0      yaml_2.3.12       otel_0.2.0       
+## [21] jsonlite_2.0.0    rlang_1.1.7</code></pre>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

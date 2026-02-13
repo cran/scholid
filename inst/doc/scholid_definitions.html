@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>How Scholarly Identifiers Are Defined</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">How Scholarly Identifiers Are Defined</h1>
+
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>This vignette explains how common scholarly identifiers are formally
+defined, what their structural components are, and what it means for
+them to be <em>valid</em> in a programmatic context.</p>
+<p>When working with identifiers in R, it is essential to distinguish
+between:</p>
+<ul>
+<li><strong>Structural validity</strong> (does it match the formal
+grammar?)</li>
+<li><strong>Checksum validity</strong> (does the control digit
+verify?)</li>
+<li><strong>Registry validity</strong> (does the identifier actually
+exist?)</li>
+</ul>
+<p>The functions in <code>scholid</code> operate at the
+<strong>structural level</strong>. The regexes shown below describe the
+structural form that an identifier must match.</p>
+<hr />
+</div>
+<div id="doi-digital-object-identifier" class="section level1">
+<h1>DOI (Digital Object Identifier)</h1>
+<p><strong>Governing body:</strong> International DOI Foundation<br />
+<strong>Standard:</strong> ISO 26324</p>
+<div id="structure" class="section level2">
+<h2>Structure</h2>
+<p>A DOI has two parts:</p>
+<pre><code>prefix/suffix</code></pre>
+<div id="prefix" class="section level3">
+<h3>Prefix</h3>
+<ul>
+<li>Always begins with <code>10.</code></li>
+<li>Followed by a registrant code (4–9 digits)</li>
+</ul>
+<p>Example:</p>
+<pre><code>10.1000
+10.1038</code></pre>
+</div>
+<div id="suffix" class="section level3">
+<h3>Suffix</h3>
+<ul>
+<li>Assigned by the registrant</li>
+<li>May contain almost any printable character</li>
+<li>Has no globally fixed grammar</li>
+<li>Case-sensitive in theory</li>
+</ul>
+<p>Example:</p>
+<pre><code>10.1000/182
+10.1038/s41586-020-2649-2</code></pre>
+</div>
+</div>
+<div id="important-properties" class="section level2">
+<h2>Important Properties</h2>
+<ul>
+<li>No checksum.</li>
+<li>The suffix is opaque.</li>
+<li>Structural validation cannot confirm existence.</li>
+<li>DOI resolution requires registry lookup (e.g., via doi.org).</li>
+</ul>
+</div>
+<div id="structural-regex" class="section level2">
+<h2>Structural Regex</h2>
+<p>A commonly accepted structural regex:</p>
+<pre><code>^10\.\d{4,9}/\S+$</code></pre>
+<p>This checks: - Prefix starts with <code>10.</code> - 4–9 digits - A
+slash - Non-whitespace suffix</p>
+<hr />
+</div>
+</div>
+<div id="orcid" class="section level1">
+<h1>ORCID</h1>
+<p><strong>Governing body:</strong> ORCID, Inc.<br />
+<strong>Standard basis:</strong> ISO 7064 (checksum algorithm)</p>
+<div id="structure-1" class="section level2">
+<h2>Structure</h2>
+<p>An ORCID iD consists of 16 characters:</p>
+<pre><code>0000-0002-1825-0097</code></pre>
+<div id="components" class="section level3">
+<h3>Components</h3>
+<ul>
+<li>16 digits total</li>
+<li>Grouped as 4-4-4-4</li>
+<li>Final character is a checksum digit</li>
+<li>Check digit may be <code>X</code></li>
+</ul>
+<p>Internally (without hyphens):</p>
+<pre><code>0000000218250097</code></pre>
+</div>
+</div>
+<div id="checksum" class="section level2">
+<h2>Checksum</h2>
+<p>Uses ISO 7064 Mod 11-2 algorithm.<br />
+A structurally correct ORCID may still be invalid if the checksum does
+not match.</p>
+</div>
+<div id="structural-regex-1" class="section level2">
+<h2>Structural Regex</h2>
+<p>Hyphenated form:</p>
+<pre><code>^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$</code></pre>
+<p>Unhyphenated internal form:</p>
+<pre><code>^\d{15}[\dX]$</code></pre>
+<hr />
+</div>
+</div>
+<div id="isbn-international-standard-book-number" class="section level1">
+<h1>ISBN (International Standard Book Number)</h1>
+<p><strong>Governing body:</strong> International ISBN Agency<br />
+<strong>Standard:</strong> ISO 2108</p>
+<div id="two-forms" class="section level2">
+<h2>Two Forms</h2>
+<div id="isbn-10" class="section level3">
+<h3>ISBN-10</h3>
+<ul>
+<li>9 digits + checksum digit</li>
+<li>Check digit may be <code>X</code></li>
+</ul>
+<p>Example:</p>
+<pre><code>0306406152
+030640615X</code></pre>
+</div>
+<div id="isbn-13" class="section level3">
+<h3>ISBN-13</h3>
+<ul>
+<li>13 digits</li>
+<li>Usually begins with 978 or 979</li>
+<li>EAN-13 checksum algorithm</li>
+</ul>
+<p>Example:</p>
+<pre><code>9780306406157</code></pre>
+</div>
+</div>
+<div id="structural-regex-2" class="section level2">
+<h2>Structural Regex</h2>
+<p>ISBN-10:</p>
+<pre><code>^\d{9}[\dX]$</code></pre>
+<p>ISBN-13:</p>
+<pre><code>^\d{13}$</code></pre>
+<hr />
+</div>
+</div>
+<div id="issn-international-standard-serial-number" class="section level1">
+<h1>ISSN (International Standard Serial Number)</h1>
+<p><strong>Governing body:</strong> ISSN International Centre<br />
+<strong>Standard:</strong> ISO 3297</p>
+<div id="structure-2" class="section level2">
+<h2>Structure</h2>
+<p>An ISSN has 8 characters:</p>
+<pre><code>1234-567X</code></pre>
+<div id="components-1" class="section level3">
+<h3>Components</h3>
+<ul>
+<li>7 digits</li>
+<li>1 checksum digit (0–9 or X)</li>
+<li>Canonical display includes a hyphen after 4 digits</li>
+</ul>
+<p>Internal numeric form:</p>
+<pre><code>1234567X</code></pre>
+</div>
+</div>
+<div id="structural-regex-3" class="section level2">
+<h2>Structural Regex</h2>
+<p>Hyphenated:</p>
+<pre><code>^\d{4}-\d{3}[\dX]$</code></pre>
+<p>Compact form:</p>
+<pre><code>^\d{7}[\dX]$</code></pre>
+<hr />
+</div>
+</div>
+<div id="arxiv-identifier" class="section level1">
+<h1>arXiv Identifier</h1>
+<p><strong>Authority:</strong> arXiv (Cornell University)</p>
+<div id="two-formats" class="section level2">
+<h2>Two Formats</h2>
+<div id="modern-post-2007" class="section level3">
+<h3>Modern (post-2007)</h3>
+<pre><code>YYMM.NNNN
+YYMM.NNNNN</code></pre>
+<p>Optional version suffix:</p>
+<pre><code>YYMM.NNNN(v2)</code></pre>
+<p>Components: - 4-digit year/month - Dot - 4–5 digit submission number
+- Optional version <code>vN</code></p>
+<p>Structural regex:</p>
+<pre><code>^\d{4}\.\d{4,5}(v\d+)?$</code></pre>
+<hr />
+</div>
+<div id="legacy-pre-2007" class="section level3">
+<h3>Legacy (pre-2007)</h3>
+<pre><code>archive/YYMMNNN</code></pre>
+<p>Example:</p>
+<pre><code>hep-th/9901001</code></pre>
+<p>Structural regex:</p>
+<pre><code>^[a-z\-]+/\d{7}(v\d+)?$</code></pre>
+<hr />
+</div>
+</div>
+</div>
+<div id="pmid-pubmed-identifier" class="section level1">
+<h1>PMID (PubMed Identifier)</h1>
+<p><strong>Authority:</strong> U.S. National Library of Medicine</p>
+<div id="structure-3" class="section level2">
+<h2>Structure</h2>
+<ul>
+<li>Pure integer</li>
+<li>Variable length</li>
+<li>No checksum</li>
+</ul>
+<p>Example:</p>
+<pre><code>12345678</code></pre>
+<p>Structural regex:</p>
+<pre><code>^\d+$</code></pre>
+<hr />
+</div>
+</div>
+<div id="pmcid-pubmed-central-identifier" class="section level1">
+<h1>PMCID (PubMed Central Identifier)</h1>
+<p><strong>Authority:</strong> PubMed Central</p>
+<div id="structure-4" class="section level2">
+<h2>Structure</h2>
+<pre><code>PMC1234567</code></pre>
+<p>Components: - Literal prefix <code>PMC</code> - One or more
+digits</p>
+<p>Structural regex:</p>
+<pre><code>^PMC\d+$</code></pre>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
