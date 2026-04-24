@@ -132,6 +132,79 @@ testthat::test_that(
 )
 
 testthat::test_that(
+    "is_orcid accepts canonical valid ORCIDs including lowercase x",
+    {
+        x <- c(
+            "0000-0002-1825-0097",
+            "0000-0000-0000-001X",
+            "0000-0000-0000-001x"
+        )
+
+        testthat::expect_identical(
+            is_orcid(x),
+            c(TRUE, TRUE, TRUE)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_orcid rejects canonical checksum-invalid ORCIDs",
+    {
+        x <- c(
+            "0000-0002-1825-009X",
+            "0000-0000-0000-0017",
+            "0000-0000-0000-0010"
+        )
+
+        testthat::expect_identical(
+            is_orcid(x),
+            c(FALSE, FALSE, FALSE)
+        )
+    }
+)
+
+testthat::test_that(
+    "ORCID normalization canonicalizes valid non-canonical inputs",
+    {
+        x <- c(
+            "0000000218250097",
+            "000000000000001x",
+            "https://orcid.org/0000-0002-1825-0097",
+            "orcid:0000-0000-0000-001x"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "orcid"),
+            c(
+                "0000-0002-1825-0097",
+                "0000-0000-0000-001X",
+                "0000-0002-1825-0097",
+                "0000-0000-0000-001X"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized ORCID outputs validate and classify as orcid",
+    {
+        x <- normalize_scholid(
+            c(
+                "0000000218250097",
+                "000000000000001x",
+                "https://orcid.org/0000-0002-1825-0097",
+                "orcid:0000-0000-0000-001x"
+            ),
+            "orcid"
+        )
+
+        testthat::expect_true(all(is_orcid(x)))
+        testthat::expect_true(all(is_scholid(x, "orcid")))
+        testthat::expect_true(all(classify_scholid(x) == "orcid"))
+    }
+)
+
+testthat::test_that(
     "is_orcid validates checksum and allows X check digit",
     {
         x <- c(
@@ -222,6 +295,52 @@ testthat::test_that(
         testthat::expect_identical(
             got,
             c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid does not treat valid ISBNs as PMIDs",
+    {
+        x <- c(
+            "9780306406157",
+            "0306406152"
+        )
+
+        testthat::expect_identical(
+            is_scholid(x, "pmid"),
+            c(FALSE, FALSE)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid still accepts ordinary digit-only PMIDs",
+    {
+        x <- c(
+            "12345678",
+            "20493630",
+            "1234567890123"
+        )
+
+        testthat::expect_identical(
+            is_scholid(x, "pmid"),
+            c(TRUE, TRUE, TRUE)
+        )
+    }
+)
+
+testthat::test_that(
+    "classify_scholid keeps digit-only valid ISBNs as isbn",
+    {
+        x <- c(
+            "9780306406157",
+            "0306406152"
+        )
+
+        testthat::expect_identical(
+            classify_scholid(x),
+            c("isbn", "isbn")
         )
     }
 )
@@ -529,3 +648,20 @@ testthat::test_that(
     }
 )
 
+
+testthat::test_that(
+    "isbn validation rejects malformed grouped forms",
+    {
+        testthat::expect_false(is_isbn("1234 5678 9X"))
+        testthat::expect_false(is_isbn("97-80-306-40615-7"))
+
+        testthat::expect_identical(
+            normalize_scholid("1234 5678 9X", "isbn"),
+            NA_character_
+        )
+        testthat::expect_identical(
+            normalize_scholid("97-80-306-40615-7", "isbn"),
+            NA_character_
+        )
+    }
+)

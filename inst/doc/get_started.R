@@ -92,6 +92,3 @@ scholid::detect_scholid_type(
   )
 )
 
-## ----session info-------------------------------------------------------------
-sessionInfo()
-

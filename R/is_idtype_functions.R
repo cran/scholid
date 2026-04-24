@@ -15,8 +15,7 @@ is_doi <- function(x) {
     x <- as.character(x)
     out <- rep(NA, length(x))
     ok <- !is.na(x)
-    pat <- .scholid_registry()[["doi"]]$pat
-    out[ok] <- grepl(pat, x[ok], perl = TRUE)
+    out[ok] <- vapply(x[ok], .is_doi_strict, logical(1))
     out
 }
 
@@ -35,8 +34,8 @@ is_orcid <- function(x) {
     out <- rep(NA, length(x))
 
     ok <- !is.na(x)
-    pat <- "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9X]$"
-    y <- x[ok]
+    pat <- "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9Xx]$"
+    y <- toupper(x[ok])
 
     valid <- grepl(pat, y)
     res <- rep(FALSE, length(y))
@@ -68,10 +67,10 @@ is_orcid <- function(x) {
 #'
 #' @noRd
 is_isbn <- function(x) {
-    x <- toupper(gsub("[^0-9Xx]", "", as.character(x)))
-    out <- rep(NA, length(x))
+    raw <- as.character(x)
+    out <- rep(NA, length(raw))
 
-    ok <- !is.na(x)
+    ok <- !is.na(raw)
 
     is10 <- function(s) {
         if (!grepl("^\\d{9}[0-9X]$", s)) return(FALSE)
@@ -93,11 +92,14 @@ is_isbn <- function(x) {
         cd == d[13]
     }
 
-    out[ok] <- vapply(
-        x[ok],
-        function(s) is10(s) || is13(s),
-        logical(1)
-    )
+    out[ok] <- vapply(raw[ok], function(s) {
+        if (!.isbn_format_ok(s)) {
+            return(FALSE)
+        }
+
+        compact <- toupper(gsub("[- ]", "", s))
+        is10(compact) || is13(compact)
+    }, logical(1))
 
     out
 }
@@ -158,7 +160,9 @@ is_arxiv <- function(x) {
 
 #' Check PubMed identifiers
 #'
-#' Tests whether values are valid PubMed identifiers (PMIDs).
+#' Tests whether values are structurally plausible PubMed identifiers
+#' (PMIDs). PMID checks are based on digit-only syntax, with exclusion of
+#' values that are valid ISBNs to reduce cross-type false positives.
 #'
 #' @param x A vector of values to check.
 #'
@@ -168,9 +172,16 @@ is_arxiv <- function(x) {
 is_pmid <- function(x) {
     x <- as.character(x)
     out <- rep(NA, length(x))
+
     ok <- !is.na(x)
+    y <- x[ok]
+
     pat <- .scholid_registry()[["pmid"]]$pat
-    out[ok] <- grepl(pat, x[ok], perl = TRUE)
+    res <- grepl(pat, y, perl = TRUE)
+
+    res[res] <- !is_isbn(y[res])
+
+    out[ok] <- res
     out
 }
 
@@ -191,4 +202,101 @@ is_pmcid <- function(x) {
     pat <- .scholid_registry()[["pmcid"]]$pat
     out[ok] <- grepl(pat, x[ok], perl = TRUE)
     out
+}
+
+
+# Level 2 functions (functions called by level 1 functions) definitions --------
+
+
+#' Strict DOI validator
+#'
+#' @param x A single character string.
+#'
+#' @return A single logical value.
+#'
+#' @noRd
+.is_doi_strict <- function(x) {
+    if (!nzchar(x)) {
+        return(FALSE)
+    }
+
+    # Broad DOI structure
+    pat <- .scholid_registry()[["doi"]]$pat
+    if (!grepl(pat, x, perl = TRUE)) {
+        return(FALSE)
+    }
+
+    # Reject obvious markup contamination
+    if (grepl("[\"']", x, perl = TRUE)) {
+        return(FALSE)
+    }
+    if (grepl("</", x, perl = TRUE)) {
+        return(FALSE)
+    }
+    if (grepl(">[^[:space:]]*<", x, perl = TRUE)) {
+        return(FALSE)
+    }
+
+    # Reject obvious trailing wrapper characters
+    if (grepl("[<>()\\[\\]{}]$", x, perl = TRUE)) {
+        return(FALSE)
+    }
+
+    # Reject a DOI immediately followed by letters after an unmatched closer,
+    # e.g. 10.1000/182)yy
+    if (grepl("[)\\]}>][[:alpha:]]+$", x, perl = TRUE)) {
+        return(FALSE)
+    }
+
+    TRUE
+}
+
+
+#' Check whether an ISBN string has an acceptable input format
+#'
+#' @description
+#' Returns `TRUE` for compact ISBN-10 and ISBN-13 strings, and for grouped
+#' forms that use single spaces or hyphens in acceptable positions.
+#'
+#' This check validates input formatting only. It does not verify the ISBN
+#' checksum.
+#'
+#' @param x A single candidate ISBN string.
+#'
+#' @return A single logical value.
+#'
+#' @noRd
+.isbn_format_ok <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return(FALSE)
+    }
+
+    # compact forms
+    if (grepl("^\\d{9}[0-9Xx]$", x) || grepl("^\\d{13}$", x)) {
+        return(TRUE)
+    }
+
+    # formatted forms: digits/X separated by single spaces or hyphens,
+    # with 10 or 13 ISBN characters total after stripping separators
+    if (!grepl("^[0-9Xx -]+$", x)) {
+        return(FALSE)
+    }
+    if (grepl("(^[- ]|[- ]$|[- ]{2,}|[- ]{2,})", x)) {
+        return(FALSE)
+    }
+
+    compact <- gsub("[- ]", "", x)
+    n <- nchar(compact)
+
+    if (n == 10) {
+        # ISBN-10: must consist of 4 groups if separators are present
+        return(grepl("^[0-9]+([ -][0-9]+){2}[ -][0-9Xx]$", x))
+    }
+
+    if (n == 13) {
+        # ISBN-13: grouped form must start with 978 or 979
+        return(grepl("^97[89]([ -][0-9]+){4}$", x))
+    }
+
+    FALSE
 }

@@ -118,3 +118,64 @@ testthat::test_that(
         testthat::expect_true(all(is.na(got)))
     }
 )
+
+testthat::test_that(
+    "detect and normalize agree on labeled ISBN inputs",
+    {
+        x <- c(
+            "ISBN 9780306406157",
+            "isbn:9780306406157",
+            "ISBN-13: 9780306406157",
+            "ISBN 0306406152",
+            "isbn:0306406152"
+        )
+
+        testthat::expect_identical(
+            detect_scholid_type(x),
+            c("isbn", "isbn", "isbn", "isbn", "isbn")
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "isbn"),
+            c(
+                "9780306406157",
+                "9780306406157",
+                "9780306406157",
+                "0306406152",
+                "0306406152"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "detect_scholid_type prefers specific normalized types over pmid",
+    {
+        x <- c(
+            "0000000218250097",
+            "20493630",
+            "9780306406157",
+            "12345678"
+        )
+
+        testthat::expect_identical(
+            detect_scholid_type(x),
+            c("orcid", "issn", "isbn", "pmid")
+        )
+    }
+)
+
+testthat::test_that(
+    "detect_scholid_type keeps PMID as fallback for plain numeric inputs",
+    {
+        x <- c(
+            "12345678",
+            "PMID: 12345678"
+        )
+
+        testthat::expect_identical(
+            detect_scholid_type(x),
+            c("pmid", "pmid")
+        )
+    }
+)
