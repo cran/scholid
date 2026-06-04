@@ -131,6 +131,837 @@ testthat::test_that("normalize_orcid removes wrappers and enforces grouping", {
     testthat::expect_identical(got, exp)
 })
 
+testthat::test_that(
+    "normalize_ror strips wrappers and enforces compact lowercase form", {
+    x <- c(
+        "01an7q238",
+        "https://ror.org/01an7q238",
+        "https://ror.org/01an7q238/",
+        "ror.org/01an7q238",
+        "ROR: 02mhbdp94",
+        " 02s376052 ",
+        "02mhbdp99",
+        "bad",
+        NA
+    )
+
+    got <- normalize_ror(x)
+    exp <- c(
+        "01an7q238",
+        "01an7q238",
+        "01an7q238",
+        "01an7q238",
+        "02mhbdp94",
+        "02s376052",
+        NA_character_,
+        NA_character_,
+        NA_character_
+    )
+
+    testthat::expect_identical(got, exp)
+})
+
+testthat::test_that(
+    "normalize_swhid strips wrappers and requires swh prefix or resolver URL",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "https://archive.softwareheritage.org/swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "https://identifiers.org/swh/swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+            "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "bad",
+            NA
+        )
+
+        got <- normalize_swhid(x)
+        exp <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            NA_character_,
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that("normalize_swhid strips wrappers and lwcases compactly", {
+    x <- c(
+        "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "https://archive.softwareheritage.org/swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "https://identifiers.org/swh/swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+        "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;unknown=foo",
+        "bad",
+        NA
+    )
+
+    got <- normalize_swhid(x)
+
+    exp <- c(
+        "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+        "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        NA_character_,
+        NA_character_,
+        NA_character_,
+        NA_character_,
+        NA_character_
+    )
+
+    testthat::expect_identical(got, exp)
+})
+
+testthat::test_that(
+    "normalize_rrid strips wrappers and requires RRID label or resolver URL",
+    {
+        x <- c(
+            "RRID:AB_262044",
+            "https://scicrunch.org/resolver/RRID:AB_262044",
+            "https://identifiers.org/RRID:SCR_007358",
+            "RRID: AB_262044",
+            "rrid:CVCL_2260",
+            "AB_262044",
+            "RRID:UNKNOWN_123",
+            "bad",
+            NA
+        )
+
+        got <- normalize_rrid(x)
+        exp <- c(
+            "RRID:AB_262044",
+            "RRID:AB_262044",
+            "RRID:SCR_007358",
+            "RRID:AB_262044",
+            "RRID:CVCL_2260",
+            NA_character_,
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalize_bibcode strips wrappers and preserves case",
+    {
+        x <- c(
+            "1992ApJ...400L...1W",
+            "https://ui.adsabs.harvard.edu/abs/1992ApJ...400L...1W",
+            "https://adsabs.harvard.edu/abs/1995ApJ...438..387R",
+            "bibcode: 1974MNRAS.168..249B",
+            "1992ApJ...400L...1W.",
+            "1992ApJ...400L...1",
+            "1992.....400L...1W",
+            "not-a-bibcode",
+            NA
+        )
+
+        got <- normalize_bibcode(x)
+        exp <- c(
+            "1992ApJ...400L...1W",
+            "1992ApJ...400L...1W",
+            "1995ApJ...438..387R",
+            "1974MNRAS.168..249B",
+            "1992ApJ...400L...1W",
+            NA_character_,
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized bibcode outputs are valid bibcodes and classify as bibcode",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://ui.adsabs.harvard.edu/abs/1992ApJ...400L...1W",
+                "bibcode:1995ApJ...438..387R"
+            ),
+            "bibcode"
+        )
+
+        testthat::expect_true(all(is_bibcode(x)))
+        testthat::expect_true(all(is_scholid(x, "bibcode")))
+        testthat::expect_true(all(classify_scholid(x) == "bibcode"))
+    }
+)
+
+testthat::test_that(
+    "Bibcode normalization accepts plausible labeled and URL input forms",
+    {
+        x <- c(
+            "1992ApJ...400L...1W",
+            "https://ui.adsabs.harvard.edu/abs/1992ApJ...400L...1W",
+            "bibcode:1995ApJ...438..387R"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "bibcode"),
+            c(
+                "1992ApJ...400L...1W",
+                "1992ApJ...400L...1W",
+                "1995ApJ...438..387R"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "Bibcode normalization rejects malformed bibcodes",
+    {
+        x <- c(
+            "1992ApJ...400L...1",
+            "1992.....400L...1W",
+            "catalog 1992ApJ...400L...1W",
+            "(1992ApJ...400L...1W)"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "bibcode"),
+            rep(NA_character_, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "normalize_ark strips wrappers and canonicalizes to ark:/ form",
+    {
+        x <- c(
+            "ark:/12148/btv1b8449691v",
+            "https://n2t.net/ark:/12148/btv1b8449691v",
+            "ark:13030/654xz321",
+            "ark:/12148/btv1b8449691v/f29.",
+            "12148/btv1b8449691v",
+            "ark:/1234/btv1b8449691v",
+            "not-an-ark",
+            NA
+        )
+
+        got <- normalize_ark(x)
+        exp <- c(
+            "ark:/12148/btv1b8449691v",
+            "ark:/12148/btv1b8449691v",
+            "ark:/13030/654xz321",
+            "ark:/12148/btv1b8449691v/f29",
+            NA_character_,
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized ARK outputs are valid ARKs and classify as ark",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://n2t.net/ark:/13030/654xz321",
+                "ark:12148/btv1b8449691v"
+            ),
+            "ark"
+        )
+
+        testthat::expect_true(all(is_ark(x)))
+        testthat::expect_true(all(is_scholid(x, "ark")))
+        testthat::expect_true(all(classify_scholid(x) == "ark"))
+    }
+)
+
+testthat::test_that(
+    "normalize_uniprot strips wrappers and canonicalizes to uppercase accessions",
+    {
+        x <- c(
+            "P12345",
+            "https://www.uniprot.org/uniprot/P04637",
+            "https://identifiers.org/uniprot/Q9H0H5",
+            "uniprot:A0A022YWF9",
+            "p12345",
+            "P123",
+            "RRID:AB_262044",
+            NA
+        )
+
+        got <- normalize_uniprot(x)
+        exp <- c(
+            "P12345",
+            "P04637",
+            "Q9H0H5",
+            "A0A022YWF9",
+            "P12345",
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized UniProt outputs are valid UniProt accessions and classify as uniprot",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.uniprot.org/uniprot/P04637",
+                "uniprot:Q9H0H5"
+            ),
+            "uniprot"
+        )
+
+        testthat::expect_true(all(is_uniprot(x)))
+        testthat::expect_true(all(is_scholid(x, "uniprot")))
+        testthat::expect_true(all(classify_scholid(x) == "uniprot"))
+    }
+)
+
+testthat::test_that(
+    "normalize_refseq strips wrappers and canonicalizes to uppercase accessions",
+    {
+        x <- c(
+            "NM_001744.6",
+            "https://www.ncbi.nlm.nih.gov/nuccore/NM_001744.6",
+            "https://www.ncbi.nlm.nih.gov/protein/NP_001735.1",
+            "https://identifiers.org/refseq/NC_003619.1",
+            "refseq:NM_021964.7",
+            "nm_001744.6",
+            "NM_001744",
+            "RRID:AB_262044",
+            NA
+        )
+
+        got <- normalize_refseq(x)
+        exp <- c(
+            "NM_001744.6",
+            "NM_001744.6",
+            "NP_001735.1",
+            "NC_003619.1",
+            "NM_021964.7",
+            "NM_001744.6",
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized RefSeq outputs are valid RefSeq accessions and classify as refseq",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/nuccore/NM_001744.6",
+                "refseq:NP_001735.1"
+            ),
+            "refseq"
+        )
+
+        testthat::expect_true(all(is_refseq(x)))
+        testthat::expect_true(all(is_scholid(x, "refseq")))
+        testthat::expect_true(all(classify_scholid(x) == "refseq"))
+    }
+)
+
+testthat::test_that(
+    "normalize_sra strips wrappers and canonicalizes to uppercase accessions",
+    {
+        x <- c(
+            "SRR1553610",
+            "https://www.ncbi.nlm.nih.gov/sra/SRR1553610",
+            "https://identifiers.org/sra/SRX1234567",
+            "sra:SRP006081",
+            "srr1553610",
+            "SRR123",
+            "NM_001744.6",
+            NA
+        )
+
+        got <- normalize_sra(x)
+        exp <- c(
+            "SRR1553610",
+            "SRR1553610",
+            "SRX1234567",
+            "SRP006081",
+            "SRR1553610",
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized SRA outputs are valid SRA accessions and classify as sra",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/sra/SRR1553610",
+                "sra:SRX1234567"
+            ),
+            "sra"
+        )
+
+        testthat::expect_true(all(is_sra(x)))
+        testthat::expect_true(all(is_scholid(x, "sra")))
+        testthat::expect_true(all(classify_scholid(x) == "sra"))
+    }
+)
+
+testthat::test_that(
+    "normalize_geo strips wrappers and canonicalizes to uppercase accessions",
+    {
+        x <- c(
+            "GSE2553",
+            "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2553",
+            "https://identifiers.org/geo/GSM313800",
+            "geo:GPL96",
+            "gse2553",
+            "GSE1",
+            "SRR1553610",
+            NA
+        )
+
+        got <- normalize_geo(x)
+        exp <- c(
+            "GSE2553",
+            "GSE2553",
+            "GSM313800",
+            "GPL96",
+            "GSE2553",
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized GEO outputs are valid GEO accessions and classify as geo",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2553",
+                "geo:GSM313800"
+            ),
+            "geo"
+        )
+
+        testthat::expect_true(all(is_geo(x)))
+        testthat::expect_true(all(is_scholid(x, "geo")))
+        testthat::expect_true(all(classify_scholid(x) == "geo"))
+    }
+)
+
+testthat::test_that(
+    "normalize_bioproject strips wrappers and canonicalizes to uppercase accessions",
+    {
+        x <- c(
+            "PRJNA257197",
+            "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197",
+            "https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJEB12345",
+            "https://identifiers.org/bioproject/PRJDB303",
+            "bioproject:PRJDA1234",
+            "prjna257197",
+            "PRJNA1",
+            "GSE2553",
+            NA
+        )
+
+        got <- normalize_bioproject(x)
+        exp <- c(
+            "PRJNA257197",
+            "PRJNA257197",
+            "PRJEB12345",
+            "PRJDB303",
+            "PRJDA1234",
+            "PRJNA257197",
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized BioProject outputs are valid BioProject accessions and classify as bioproject",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197",
+                "bioproject:PRJEB12345"
+            ),
+            "bioproject"
+        )
+
+        testthat::expect_true(all(is_bioproject(x)))
+        testthat::expect_true(all(is_scholid(x, "bioproject")))
+        testthat::expect_true(all(classify_scholid(x) == "bioproject"))
+    }
+)
+
+testthat::test_that(
+    "normalize_assembly strips wrappers and canonicalizes to uppercase accessions",
+    {
+        x <- c(
+            "GCF_000001405.40",
+            "https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.40",
+            "https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_009914755.4/",
+            "https://identifiers.org/insdc.gcf:GCF_000001405.40",
+            "assembly:GCA_000001405.29",
+            "gcf_000001405.40",
+            "GCF_000001405",
+            "NM_001744.6",
+            NA
+        )
+
+        got <- normalize_assembly(x)
+        exp <- c(
+            "GCF_000001405.40",
+            "GCF_000001405.40",
+            "GCA_009914755.4",
+            "GCF_000001405.40",
+            "GCA_000001405.29",
+            "GCF_000001405.40",
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized assembly outputs are valid assembly accessions and classify as assembly",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.40",
+                "assembly:GCA_000001405.29"
+            ),
+            "assembly"
+        )
+
+        testthat::expect_true(all(is_assembly(x)))
+        testthat::expect_true(all(is_scholid(x, "assembly")))
+        testthat::expect_true(all(classify_scholid(x) == "assembly"))
+    }
+)
+
+testthat::test_that(
+    "ARK normalization accepts plausible labeled and URL input forms",
+    {
+        x <- c(
+            "ark:/12148/btv1b8449691v",
+            "https://n2t.net/ark:/12148/btv1b8449691v",
+            "ark:13030/654xz321"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "ark"),
+            c(
+                "ark:/12148/btv1b8449691v",
+                "ark:/12148/btv1b8449691v",
+                "ark:/13030/654xz321"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "ARK normalization rejects bare paths and malformed ARKs",
+    {
+        x <- c(
+            "12148/btv1b8449691v",
+            "ark:/1234/btv1b8449691v",
+            "ark:/12148/",
+            "not-an-ark"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "ark"),
+            rep(NA_character_, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "normalize_isni strips wrappers and preserves compact uppercase form",
+    {
+        x <- c(
+            "000000012146438X",
+            "https://isni.org/isni/000000012124423X",
+            "ISNI 0000 0001 2146 438X",
+            "urn:isni:000000012146438X",
+            "0000-0002-1825-0097",
+            "000000012146438A",
+            "not-an-isni",
+            NA
+        )
+
+        got <- normalize_isni(x)
+        exp <- c(
+            "000000012146438X",
+            "000000012124423X",
+            "000000012146438X",
+            "000000012146438X",
+            NA_character_,
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized ISNI outputs are valid ISNIs and classify as isni",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://isni.org/isni/000000012124423X",
+                "ISNI 0000 0001 2146 438X"
+            ),
+            "isni"
+        )
+
+        testthat::expect_true(all(is_isni(x)))
+        testthat::expect_true(all(is_scholid(x, "isni")))
+        testthat::expect_true(all(classify_scholid(x) == "isni"))
+    }
+)
+
+testthat::test_that(
+    "ISNI normalization accepts plausible labeled and URL input forms",
+    {
+        x <- c(
+            "000000012146438X",
+            "https://isni.org/isni/000000012124423X",
+            "ISNI 0000 0001 2146 438X"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "isni"),
+            c(
+                "000000012146438X",
+                "000000012124423X",
+                "000000012146438X"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "ISNI normalization rejects hyphenated ORCID form and invalid checksums",
+    {
+        x <- c(
+            "0000-0002-1825-0097",
+            "000000012146438A",
+            "catalog 000000012146438X",
+            "(000000012146438X)"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "isni"),
+            rep(NA_character_, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "normalize_openalex strips wrappers and uppercases canonical keys",
+    {
+        x <- c(
+            "W2741809807",
+            "https://openalex.org/W2741809807",
+            "https://openalex.org/W2741809807/",
+            "https://api.openalex.org/works/W2741809807",
+            "https://api.openalex.org/authors/A5023888391",
+            "w2741809807",
+            "W123",
+            "C12345678",
+            "not-an-openalex-id",
+            NA
+        )
+
+        got <- normalize_openalex(x)
+        exp <- c(
+            "W2741809807",
+            "W2741809807",
+            "W2741809807",
+            "W2741809807",
+            "A5023888391",
+            "W2741809807",
+            NA_character_,
+            NA_character_,
+            NA_character_,
+            NA_character_
+        )
+
+        testthat::expect_identical(got, exp)
+    }
+)
+
+testthat::test_that(
+    "normalized RRID outputs are valid RRIDs and classify as rrid",
+    {
+        x <- normalize_scholid(
+            c(
+                "RRID:AB_262044",
+                "https://scicrunch.org/resolver/RRID:SCR_007358",
+                "RRID: Addgene_80088"
+            ),
+            "rrid"
+        )
+
+        testthat::expect_true(all(is_rrid(x)))
+        testthat::expect_true(all(is_scholid(x, "rrid")))
+        testthat::expect_true(all(classify_scholid(x) == "rrid"))
+    }
+)
+
+testthat::test_that(
+    "normalized OpenAlex outputs are valid OpenAlex IDs and classify as openalex",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://openalex.org/W2741809807",
+                "https://api.openalex.org/institutions/I97018004",
+                "w2741809807"
+            ),
+            "openalex"
+        )
+
+        testthat::expect_true(all(is_openalex(x)))
+        testthat::expect_true(all(is_scholid(x, "openalex")))
+        testthat::expect_true(all(classify_scholid(x) == "openalex"))
+    }
+)
+
+testthat::test_that(
+    "normalized SWHID outputs are valid SWHIDs and classify as swhid",
+    {
+        x <- normalize_scholid(
+            c(
+                "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+                "https://archive.softwareheritage.org/swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+                paste0(
+                    "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;",
+                    "origin=https://example.org/repo.git;",
+                    "lines=9-15"
+                )
+            ),
+            "swhid"
+        )
+
+        testthat::expect_true(all(is_swhid(x)))
+        testthat::expect_true(all(is_scholid(x, "swhid")))
+        testthat::expect_true(all(classify_scholid(x) == "swhid"))
+    }
+)
+
+testthat::test_that(
+    "RRID normalization accepts plausible labeled and URL input forms",
+    {
+        x <- c(
+            "RRID:AB_262044",
+            "https://scicrunch.org/resolver/RRID:AB_262044",
+            "RRID: IMSR_JAX:000664",
+            "rrid:MGI:3840442"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "rrid"),
+            c(
+                "RRID:AB_262044",
+                "RRID:AB_262044",
+                "RRID:IMSR_JAX:000664",
+                "RRID:MGI:3840442"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "RRID normalization rejects bare local IDs and unknown authorities",
+    {
+        x <- c(
+            "AB_262044",
+            "RRID:UNKNOWN_123",
+            "catalog AB_262044",
+            "(RRID:AB_262044)",
+            "RRID:AB_262044xyz"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "rrid"),
+            rep(NA_character_, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "OpenAlex normalization accepts plausible labeled and URL input forms",
+    {
+        x <- c(
+            "W2741809807",
+            "https://openalex.org/W2741809807",
+            "https://api.openalex.org/works/W2741809807",
+            "w2741809807"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "openalex"),
+            rep("W2741809807", length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "OpenAlex normalization rejects short tails, deprecated prefixes, and unrelated strings",
+    {
+        x <- c(
+            "W123",
+            "C12345678",
+            "catalog W2741809807",
+            "(W2741809807)",
+            "W2741809807xyz"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "openalex"),
+            rep(NA_character_, length(x))
+        )
+    }
+)
+
 testthat::test_that("ISBN normalization keeps valid inputs canonical", {
     testthat::expect_equal(
         normalize_scholid(
@@ -417,6 +1248,24 @@ testthat::test_that(
 )
 
 testthat::test_that(
+    "normalized ROR outputs are valid ROR iDs and classify as ror",
+    {
+        x <- normalize_scholid(
+            c(
+                "01an7q238",
+                "https://ror.org/02mhbdp94",
+                "ROR: 02s376052"
+            ),
+            "ror"
+        )
+
+        testthat::expect_true(all(is_ror(x)))
+        testthat::expect_true(all(is_scholid(x, "ror")))
+        testthat::expect_true(all(classify_scholid(x) == "ror"))
+    }
+)
+
+testthat::test_that(
     "normalize_orcid canonicalizes valid lowercase x to uppercase X",
     {
         x <- c(
@@ -643,6 +1492,95 @@ testthat::test_that(
                 "PMC123456",
                 "PMC123456"
             )
+        )
+    }
+)
+
+testthat::test_that(
+    "ROR normalization accepts plausible input forms",
+    {
+        x <- c(
+            "01an7q238",
+            "https://ror.org/01an7q238",
+            "ror.org/02mhbdp94",
+            "ROR: 02s376052"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "ror"),
+            c(
+                "01an7q238",
+                "01an7q238",
+                "02mhbdp94",
+                "02s376052"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "ROR normalization rejects checksum-invalid and malformed inputs",
+    {
+        x <- c(
+            "02mhbdp99",
+            "not-a-ror",
+            "02mhbdp9",
+            "(01an7q238)",
+            "abc01an7q238",
+            "01an7q238xyz"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "ror"),
+            rep(NA_character_, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "SWHID normalization accepts plausible labeled and URL input forms",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "https://archive.softwareheritage.org/swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "SWH:1:REV:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+            paste0(
+                "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;",
+                "origin=https://example.org/repo.git;",
+                "visit=swh:1:snp:d7f1b9eb7ccb596c2622c4780febaa02549830f9"
+            )
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "swhid"),
+            c(
+                "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+                "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+                "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+                paste0(
+                    "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;",
+                    "origin=https://example.org/repo.git;",
+                    "visit=swh:1:snp:d7f1b9eb7ccb596c2622c4780febaa02549830f9"
+                )
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "SWHID normalization rejects bare hex strings and invalid qualifiers",
+    {
+        x <- c(
+            "94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;unknown=foo",
+            "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;path=relative",
+            "(swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2)"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "swhid"),
+            rep(NA_character_, length(x))
         )
     }
 )

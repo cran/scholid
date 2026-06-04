@@ -238,6 +238,842 @@ testthat::test_that(
 )
 
 testthat::test_that(
+    "extract_ror finds ROR iDs in text and URLs",
+    {
+        txt <- c(
+            "Affiliation: https://ror.org/01an7q238.",
+            "ROR 02mhbdp94",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "ror"
+        )
+
+        testthat::expect_true(any(got[[1]] == "01an7q238"))
+        testthat::expect_true(any(got[[2]] == "02mhbdp94"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_ror returns multiple matches from one string",
+    {
+        txt <- paste(
+            "affiliations:",
+            "https://ror.org/01an7q238",
+            "and https://ror.org/02mhbdp94"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "ror"
+        )[[1]]
+
+        testthat::expect_true(any(got == "01an7q238"))
+        testthat::expect_true(any(got == "02mhbdp94"))
+    }
+)
+
+testthat::test_that(
+    "extract_ror rejects checksum-invalid ROR candidates",
+    {
+        txt <- "see https://ror.org/02mhbdp99 for details"
+
+        got <- extract_scholid(
+            txt,
+            "ror"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_swhid finds SWHIDs in text and URLs",
+    {
+        txt <- c(
+            "Archive swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2.",
+            "See https://archive.softwareheritage.org/swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "swhid"
+        )
+
+        testthat::expect_true(any(got[[1]] == "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2"))
+        testthat::expect_true(any(got[[2]] == "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_swhid returns multiple matches from one string",
+    {
+        txt <- paste(
+            "artifacts:",
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "and swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "swhid"
+        )[[1]]
+
+        testthat::expect_true(any(got == "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2"))
+        testthat::expect_true(any(got == "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d"))
+    }
+)
+
+testthat::test_that(
+    "extract_swhid rejects invalid SWHID candidates",
+    {
+        txt <- "see swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2 for details"
+
+        got <- extract_scholid(
+            txt,
+            "swhid"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_swhid does not extract bare hex strings without swh prefix",
+    {
+        txt <- "commit 94a9ed024d3859793618152ea559a168bbcbb5e2 was archived"
+
+        got <- extract_scholid(
+            txt,
+            "swhid"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_rrid finds RRIDs in text and URLs",
+    {
+        txt <- c(
+            "Antibody RRID:AB_262044.",
+            "Tool https://scicrunch.org/resolver/RRID:SCR_007358",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "rrid"
+        )
+
+        testthat::expect_true(any(got[[1]] == "RRID:AB_262044"))
+        testthat::expect_true(any(got[[2]] == "RRID:SCR_007358"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_rrid returns multiple matches from one string",
+    {
+        txt <- paste(
+            "resources:",
+            "RRID:AB_262044",
+            "and RRID:SCR_007358"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "rrid"
+        )[[1]]
+
+        testthat::expect_true(any(got == "RRID:AB_262044"))
+        testthat::expect_true(any(got == "RRID:SCR_007358"))
+    }
+)
+
+testthat::test_that(
+    "extract_rrid rejects unknown authority candidates",
+    {
+        txt <- "see RRID:UNKNOWN_123 for details"
+
+        got <- extract_scholid(
+            txt,
+            "rrid"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_rrid does not extract bare local IDs without RRID label",
+    {
+        txt <- "antibody AB_262044 was used"
+
+        got <- extract_scholid(
+            txt,
+            "rrid"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_bibcode finds bibcodes in text and ADS URLs",
+    {
+        txt <- c(
+            "See 1992ApJ...400L...1W for details.",
+            "ADS https://ui.adsabs.harvard.edu/abs/1995ApJ...438..387R",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "bibcode"
+        )
+
+        testthat::expect_true(any(got[[1]] == "1992ApJ...400L...1W"))
+        testthat::expect_true(any(got[[2]] == "1995ApJ...438..387R"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_bibcode returns multiple matches from one string",
+    {
+        txt <- paste(
+            "references:",
+            "1992ApJ...400L...1W",
+            "and 1995ApJ...438..387R"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "bibcode"
+        )[[1]]
+
+        testthat::expect_true(any(got == "1992ApJ...400L...1W"))
+        testthat::expect_true(any(got == "1995ApJ...438..387R"))
+    }
+)
+
+testthat::test_that(
+    "extract_bibcode rejects malformed bibcode candidates",
+    {
+        txt <- "see 1992ApJ...400L...1 and 1992.....400L...1W for details"
+
+        got <- extract_scholid(
+            txt,
+            "bibcode"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_ark finds ARKs in text and URLs",
+    {
+        txt <- c(
+            "Object ark:/12148/btv1b8449691v/f29.",
+            "Link https://n2t.net/ark:/13030/654xz321",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "ark"
+        )
+
+        testthat::expect_true(any(got[[1]] == "ark:/12148/btv1b8449691v/f29"))
+        testthat::expect_true(any(got[[2]] == "ark:/13030/654xz321"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_ark returns multiple matches from one string",
+    {
+        txt <- paste(
+            "objects:",
+            "ark:/12148/btv1b8449691v",
+            "and ark:/13030/654xz321"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "ark"
+        )[[1]]
+
+        testthat::expect_true(any(got == "ark:/12148/btv1b8449691v"))
+        testthat::expect_true(any(got == "ark:/13030/654xz321"))
+    }
+)
+
+testthat::test_that(
+    "extract_uniprot finds accessions in text and URLs",
+    {
+        txt <- c(
+            "Protein P12345 and P04637.",
+            "Link https://www.uniprot.org/uniprot/Q9H0H5",
+            "uniprot:A0A022YWF9",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "uniprot"
+        )
+
+        testthat::expect_true(any(got[[1]] == "P12345"))
+        testthat::expect_true(any(got[[1]] == "P04637"))
+        testthat::expect_true(any(got[[2]] == "Q9H0H5"))
+        testthat::expect_true(any(got[[3]] == "A0A022YWF9"))
+        testthat::expect_identical(
+            got[[4]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_uniprot returns multiple matches from one string",
+    {
+        txt <- paste(
+            "proteins:",
+            "P12345",
+            "and https://identifiers.org/uniprot/P04637"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "uniprot"
+        )[[1]]
+
+        testthat::expect_true(any(got == "P12345"))
+        testthat::expect_true(any(got == "P04637"))
+    }
+)
+
+testthat::test_that(
+    "extract_uniprot normalizes lowercase tokens and rejects invalid candidates",
+    {
+        txt <- "see p12345, P123, and RRID:AB_262044 for details"
+
+        got <- extract_scholid(
+            txt,
+            "uniprot"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            "P12345"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_refseq finds accessions in text and URLs",
+    {
+        txt <- c(
+            "Transcript NM_001744.6 and protein NP_001735.1.",
+            "Link https://www.ncbi.nlm.nih.gov/nuccore/NC_003619.1",
+            "refseq:NM_021964.7",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "refseq"
+        )
+
+        testthat::expect_true(any(got[[1]] == "NM_001744.6"))
+        testthat::expect_true(any(got[[1]] == "NP_001735.1"))
+        testthat::expect_true(any(got[[2]] == "NC_003619.1"))
+        testthat::expect_true(any(got[[3]] == "NM_021964.7"))
+        testthat::expect_identical(
+            got[[4]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_refseq returns multiple matches from one string",
+    {
+        txt <- paste(
+            "records:",
+            "NM_001744.6",
+            "and https://identifiers.org/refseq/NP_001735.1"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "refseq"
+        )[[1]]
+
+        testthat::expect_true(any(got == "NM_001744.6"))
+        testthat::expect_true(any(got == "NP_001735.1"))
+    }
+)
+
+testthat::test_that(
+    "extract_refseq normalizes lowercase tokens and rejects invalid candidates",
+    {
+        txt <- "see nm_001744.6, NM_001744, and RRID:AB_262044 for details"
+
+        got <- extract_scholid(
+            txt,
+            "refseq"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            "NM_001744.6"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_sra finds accessions in text and URLs",
+    {
+        txt <- c(
+            "Run SRR1553610 and experiment SRX1234567.",
+            "Link https://www.ncbi.nlm.nih.gov/sra/SRP006081",
+            "sra:SRS123456",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "sra"
+        )
+
+        testthat::expect_true(any(got[[1]] == "SRR1553610"))
+        testthat::expect_true(any(got[[1]] == "SRX1234567"))
+        testthat::expect_true(any(got[[2]] == "SRP006081"))
+        testthat::expect_true(any(got[[3]] == "SRS123456"))
+        testthat::expect_identical(
+            got[[4]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_sra returns multiple matches from one string",
+    {
+        txt <- paste(
+            "records:",
+            "SRR1553610",
+            "and https://identifiers.org/sra/SRX1234567"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "sra"
+        )[[1]]
+
+        testthat::expect_true(any(got == "SRR1553610"))
+        testthat::expect_true(any(got == "SRX1234567"))
+    }
+)
+
+testthat::test_that(
+    "extract_sra normalizes lowercase tokens and rejects invalid candidates",
+    {
+        txt <- "see srr1553610, SRR123, and NM_001744.6 for details"
+
+        got <- extract_scholid(
+            txt,
+            "sra"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            "SRR1553610"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_geo finds accessions in text and URLs",
+    {
+        txt <- c(
+            "Series GSE2553 and sample GSM313800.",
+            "Link https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL96",
+            "geo:GDS505",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "geo"
+        )
+
+        testthat::expect_true(any(got[[1]] == "GSE2553"))
+        testthat::expect_true(any(got[[1]] == "GSM313800"))
+        testthat::expect_true(any(got[[2]] == "GPL96"))
+        testthat::expect_true(any(got[[3]] == "GDS505"))
+        testthat::expect_identical(
+            got[[4]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_geo returns multiple matches from one string",
+    {
+        txt <- paste(
+            "records:",
+            "GSE2553",
+            "and https://identifiers.org/geo/GSM313800"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "geo"
+        )[[1]]
+
+        testthat::expect_true(any(got == "GSE2553"))
+        testthat::expect_true(any(got == "GSM313800"))
+    }
+)
+
+testthat::test_that(
+    "extract_geo normalizes lowercase tokens and rejects invalid candidates",
+    {
+        txt <- "see gse2553, GSE1, and SRR1553610 for details"
+
+        got <- extract_scholid(
+            txt,
+            "geo"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            "GSE2553"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_bioproject finds accessions in text and URLs",
+    {
+        txt <- c(
+            "Project PRJNA257197 and PRJEB12345.",
+            "Link https://www.ncbi.nlm.nih.gov/bioproject/PRJDB303",
+            "bioproject:PRJDA1234",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "bioproject"
+        )
+
+        testthat::expect_true(any(got[[1]] == "PRJNA257197"))
+        testthat::expect_true(any(got[[1]] == "PRJEB12345"))
+        testthat::expect_true(any(got[[2]] == "PRJDB303"))
+        testthat::expect_true(any(got[[3]] == "PRJDA1234"))
+        testthat::expect_identical(
+            got[[4]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_bioproject returns multiple matches from one string",
+    {
+        txt <- paste(
+            "projects:",
+            "PRJNA257197",
+            "and https://identifiers.org/bioproject/PRJEB12345"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "bioproject"
+        )[[1]]
+
+        testthat::expect_true(any(got == "PRJNA257197"))
+        testthat::expect_true(any(got == "PRJEB12345"))
+    }
+)
+
+testthat::test_that(
+    "extract_bioproject normalizes lowercase tokens and rejects invalid candidates",
+    {
+        txt <- "see prjna257197, PRJNA1, and GSE2553 for details"
+
+        got <- extract_scholid(
+            txt,
+            "bioproject"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            "PRJNA257197"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_assembly finds accessions in text and URLs",
+    {
+        txt <- c(
+            "Assembly GCF_000001405.40 and GCA_009914755.4.",
+            "Link https://www.ncbi.nlm.nih.gov/assembly/GCA_000001405.29",
+            "assembly:GCF_028878055.3",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "assembly"
+        )
+
+        testthat::expect_true(any(got[[1]] == "GCF_000001405.40"))
+        testthat::expect_true(any(got[[1]] == "GCA_009914755.4"))
+        testthat::expect_true(any(got[[2]] == "GCA_000001405.29"))
+        testthat::expect_true(any(got[[3]] == "GCF_028878055.3"))
+        testthat::expect_identical(
+            got[[4]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_assembly returns multiple matches from one string",
+    {
+        txt <- paste(
+            "assemblies:",
+            "GCF_000001405.40",
+            "and https://identifiers.org/insdc.gca:GCA_000001405.29"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "assembly"
+        )[[1]]
+
+        testthat::expect_true(any(got == "GCF_000001405.40"))
+        testthat::expect_true(any(got == "GCA_000001405.29"))
+    }
+)
+
+testthat::test_that(
+    "extract_assembly normalizes lowercase tokens and rejects invalid candidates",
+    {
+        txt <- "see gcf_000001405.40, GCF_12345.1, and NM_001744.6 for details"
+
+        got <- extract_scholid(
+            txt,
+            "assembly"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            "GCF_000001405.40"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_ark rejects bare paths and short NAAN candidates",
+    {
+        txt <- "see 12148/btv1b8449691v and ark:/1234/btv1b8449691v for details"
+
+        got <- extract_scholid(
+            txt,
+            "ark"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_isni finds ISNIs in text and URLs",
+    {
+        txt <- c(
+            "Contributor ISNI 0000 0001 2146 438X.",
+            "Profile https://isni.org/isni/000000012124423X",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "isni"
+        )
+
+        testthat::expect_true(any(got[[1]] == "000000012146438X"))
+        testthat::expect_true(any(got[[2]] == "000000012124423X"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_isni returns multiple matches from one string",
+    {
+        txt <- paste(
+            "names:",
+            "000000012146438X",
+            "and 000000012124423X"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "isni"
+        )[[1]]
+
+        testthat::expect_true(any(got == "000000012146438X"))
+        testthat::expect_true(any(got == "000000012124423X"))
+    }
+)
+
+testthat::test_that(
+    "extract_isni rejects hyphenated ORCID and invalid checksum candidates",
+    {
+        txt <- "see 0000-0002-1825-0097 and 000000012146438A for details"
+
+        got <- extract_scholid(
+            txt,
+            "isni"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_openalex finds OpenAlex IDs in text and URLs",
+    {
+        txt <- c(
+            "Work https://openalex.org/W2741809807.",
+            "Author https://api.openalex.org/authors/A5023888391",
+            NA_character_
+        )
+
+        got <- extract_scholid(
+            txt,
+            "openalex"
+        )
+
+        testthat::expect_true(any(got[[1]] == "W2741809807"))
+        testthat::expect_true(any(got[[2]] == "A5023888391"))
+        testthat::expect_identical(
+            got[[3]],
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_openalex returns multiple matches from one string",
+    {
+        txt <- paste(
+            "entities:",
+            "W2741809807",
+            "and A5023888391"
+        )
+
+        got <- extract_scholid(
+            txt,
+            "openalex"
+        )[[1]]
+
+        testthat::expect_true(any(got == "W2741809807"))
+        testthat::expect_true(any(got == "A5023888391"))
+    }
+)
+
+testthat::test_that(
+    "extract_openalex rejects deprecated concept and invalid candidates",
+    {
+        txt <- "see https://openalex.org/C12345678 and W123 for details"
+
+        got <- extract_scholid(
+            txt,
+            "openalex"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_openalex does not extract unrelated letter-digit tokens",
+    {
+        txt <- "version v2741809807 was noted"
+
+        got <- extract_scholid(
+            txt,
+            "openalex"
+        )[[1]]
+
+        testthat::expect_identical(
+            got,
+            character(0)
+        )
+    }
+)
+
+testthat::test_that(
     "extract_isbn finds ISBN-10 and ISBN-13 with hyphens/spaces",
     {
         txt <- c(
@@ -629,52 +1465,70 @@ testthat::test_that(
 testthat::test_that(
     "extract_scholid works across multiple ID types",
     {
-        txt <- c(
-            "doi:10.1000/182",
-            "ORCID 0000-0002-1825-0097",
-            "arXiv:2101.00001v2",
-            "PMCID: PMC12345",
-            "PMID 1234567",
-            "ISSN 2434-561X",
-            "ISBN 0-306-40615-2"
-        )
+    txt <- c(
+        "doi:10.1000/182",
+        "ORCID 0000-0002-1825-0097",
+        "arXiv:2101.00001v2",
+        "ADS 1992ApJ...400L...1W",
+        "OpenAlex https://openalex.org/W2741809807",
+        "ark:/12148/btv1b8449691v",
+        "PMCID: PMC12345",
+        "PMID 1234567",
+        "ISSN 2434-561X",
+        "ISBN 0-306-40615-2",
+        "ROR https://ror.org/01an7q238",
+        "RRID:AB_262044",
+        "UniProt https://www.uniprot.org/uniprot/P12345",
+        "RefSeq https://www.ncbi.nlm.nih.gov/nuccore/NM_001744.6",
+        "SRA https://www.ncbi.nlm.nih.gov/sra/SRR1553610",
+        "GEO https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2553",
+        "BioProject https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197",
+        "Assembly https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.40",
+        "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "ISNI 0000 0001 2146 438X"
+    )
 
-        got_doi <- extract_scholid(
-            txt,
-            "doi"
-        )
-        got_orc <- extract_scholid(
-            txt,
-            "orcid"
-        )
-        got_arx <- extract_scholid(
-            txt,
-            "arxiv"
-        )
-        got_pmc <- extract_scholid(
-            txt,
-            "pmcid"
-        )
-        got_pmi <- extract_scholid(
-            txt,
-            "pmid"
-        )
-        got_isn <- extract_scholid(
-            txt,
-            "issn"
-        )
-        got_isb <- extract_scholid(
-            txt,
-            "isbn"
-        )
+    got_doi <- extract_scholid(txt, "doi")
+    got_orc <- extract_scholid(txt, "orcid")
+    got_arx <- extract_scholid(txt, "arxiv")
+    got_bib <- extract_scholid(txt, "bibcode")
+    got_oa <- extract_scholid(txt, "openalex")
+    got_ark <- extract_scholid(txt, "ark")
+    got_pmc <- extract_scholid(txt, "pmcid")
+    got_pmi <- extract_scholid(txt, "pmid")
+    got_isn <- extract_scholid(txt, "issn")
+    got_isb <- extract_scholid(txt, "isbn")
+    got_ror <- extract_scholid(txt, "ror")
+    got_rrid <- extract_scholid(txt, "rrid")
+    got_uniprot <- extract_scholid(txt, "uniprot")
+    got_refseq <- extract_scholid(txt, "refseq")
+    got_sra <- extract_scholid(txt, "sra")
+    got_geo <- extract_scholid(txt, "geo")
+    got_bioproject <- extract_scholid(txt, "bioproject")
+    got_assembly <- extract_scholid(txt, "assembly")
+    got_swhid <- extract_scholid(txt, "swhid")
+    got_isni <- extract_scholid(txt, "isni")
 
-        testthat::expect_true(length(got_doi[[1]]) >= 1L)
-        testthat::expect_true(length(got_orc[[2]]) >= 1L)
-        testthat::expect_true(length(got_arx[[3]]) >= 1L)
-        testthat::expect_true(length(got_pmc[[4]]) >= 1L)
-        testthat::expect_true(length(got_pmi[[5]]) >= 1L)
-        testthat::expect_true(length(got_isn[[6]]) >= 1L)
-        testthat::expect_true(length(got_isb[[7]]) >= 1L)
+    testthat::expect_true(length(got_doi[[1]]) >= 1L)
+    testthat::expect_true(length(got_orc[[2]]) >= 1L)
+    testthat::expect_true(length(got_arx[[3]]) >= 1L)
+    testthat::expect_true(length(got_bib[[4]]) >= 1L)
+    testthat::expect_true(length(got_oa[[5]]) >= 1L)
+    testthat::expect_true(length(got_ark[[6]]) >= 1L)
+    testthat::expect_true(length(got_pmc[[7]]) >= 1L)
+    testthat::expect_true(length(got_pmi[[8]]) >= 1L)
+    testthat::expect_true(length(got_isn[[9]]) >= 1L)
+    testthat::expect_true(length(got_isb[[10]]) >= 1L)
+    testthat::expect_true(length(got_ror[[11]]) >= 1L)
+    testthat::expect_true(length(got_rrid[[12]]) >= 1L)
+    testthat::expect_true(length(got_uniprot[[13]]) >= 1L)
+    testthat::expect_true(length(got_refseq[[14]]) >= 1L)
+    testthat::expect_true(length(got_sra[[15]]) >= 1L)
+    testthat::expect_true(length(got_geo[[16]]) >= 1L)
+    testthat::expect_true(length(got_bioproject[[17]]) >= 1L)
+    testthat::expect_true(length(got_assembly[[18]]) >= 1L)
+    testthat::expect_true(length(got_swhid[[19]]) >= 1L)
+    testthat::expect_true(length(got_isni[[20]]) >= 1L)
     }
 )
 

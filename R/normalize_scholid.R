@@ -5,15 +5,17 @@
 #' to a canonical form (e.g., removing URL prefixes, labels, or separators).
 #'
 #' Normalization requires that inputs match the expected identifier structure.
-#' For identifier types with checksum algorithms, normalization also requires
-#' checksum-valid values. Inputs that do not meet these requirements yield
-#' `NA_character_`.
+#' For identifier types with checksum algorithms (ORCID, ROR, ISNI, ISBN, ISSN),
+#' normalization also requires checksum-valid values. Inputs that do not meet
+#' these requirements yield `NA_character_`.
 #'
 #' Normalized outputs are canonical, type-specific representations of valid
 #' identifiers.
 #'
-#' Use [is_scholid()] to test whether values are fully valid identifiers,
-#' including checksum verification where applicable.
+#' Use [is_scholid()] to test whether already-canonical values are valid
+#' identifiers of a given type. Both functions apply checksum verification
+#' where applicable; normalization additionally accepts wrapped input forms
+#' and returns canonical strings.
 #'
 #' @param x A vector of values to normalize.
 #' @param type A single string giving the identifier type. See
@@ -38,23 +40,11 @@ normalize_scholid <- function(
         )
     type <- .scholid_match_type(type)
 
-    fun_name <- paste0(
-        "normalize_",
-        type
-        )
-    fun <- get0(
-        fun_name,
-        mode = "function",
-        inherits = TRUE
-        )
-
-    # nocov start
-    if (is.null(fun)) {
-        stop("Missing implementation: ", fun_name, "().", call. = FALSE)
-    }
-    # nocov end
-
-    fun(x)
+    .scholid_dispatch(
+        type   = type,
+        prefix = "normalize_",
+        x      = x
+    )
 }
 
 
@@ -74,11 +64,8 @@ normalize_scholid <- function(
 #'
 #' @noRd
 normalize_doi <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
-
-    ok <- !is.na(x)
-    y <- trimws(x[ok])
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
 
     y <- sub("^doi:\\s*", "", y, ignore.case = TRUE)
     y <- sub("^https?://(dx\\.)?doi\\.org/", "", y, ignore.case = TRUE)
@@ -87,8 +74,167 @@ normalize_doi <- function(x) {
     keep <- vapply(y, .is_doi_strict, logical(1))
     y[!keep] <- NA_character_
 
-    out[ok] <- y
-    out
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize SWHID identifiers
+#'
+#' @description
+#' Normalizes Software Heritage identifiers from resolver URLs or labeled forms
+#' to canonical compact `swh:` form. Inputs must include an explicit `swh:`
+#' prefix or a supported resolver URL; bare 40-character hex strings are
+#' rejected.
+#'
+#' Normalization requires structurally valid identifiers. Content-hash
+#' correctness is not checked.
+#'
+#' @param x A vector of SWHID values.
+#'
+#' @return A character vector of normalized SWHIDs. Invalid or unsupported
+#'   inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_swhid <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+
+    has_marker <- grepl("swh\\s*:", y, ignore.case = TRUE) |
+        grepl("archive\\.softwareheritage\\.org/", y, ignore.case = TRUE) |
+        grepl("browse\\.softwareheritage\\.org/", y, ignore.case = TRUE) |
+        grepl("identifiers\\.org/swh/", y, ignore.case = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://archive\\.softwareheritage\\.org/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://browse\\.softwareheritage\\.org/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/swh/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- gsub("[[:space:]]+", "", y)
+    y <- sub("[.,;:!?]+$", "", y)
+
+    y <- vapply(y, function(val) {
+        if (is.na(val) || !nzchar(val)) {
+            return(NA_character_)
+        }
+
+        val <- .canonicalize_swhid(val)
+        if (is_swhid(val)) {
+            val
+        } else {
+            NA_character_
+        }
+    }, character(1))
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize ARK identifiers
+#'
+#' @description
+#' Normalizes Archival Resource Keys from resolver URLs or `ark:`-prefixed
+#' strings to canonical `ark:/NAAN/Name` form. Inputs must include an explicit
+#' `ark:` label; bare paths without the label are rejected.
+#'
+#' Normalization requires structurally valid identifiers. Resolver existence
+#' is not checked.
+#'
+#' @param x A vector of ARK values.
+#'
+#' @return A character vector of normalized ARKs. Invalid or unsupported
+#'   inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_ark <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+
+    has_marker <- grepl("(?i)ark:", y, perl = TRUE)
+    y[!has_marker] <- NA_character_
+
+    y <- vapply(y, function(val) {
+        if (is.na(val) || !nzchar(val)) {
+            return(NA_character_)
+        }
+
+        val <- .canonicalize_ark(val)
+        if (is_ark(val)) {
+            val
+        } else {
+            NA_character_
+        }
+    }, character(1))
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize ISNI identifiers
+#'
+#' @description
+#' Normalizes International Standard Name Identifiers from `isni.org` URLs,
+#' `ISNI`-prefixed spaced forms, or compact 16-character strings to canonical
+#' compact uppercase form. Hyphenated ORCID-style strings are rejected.
+#'
+#' Normalization requires checksum-valid identifiers.
+#'
+#' @param x A vector of ISNI values.
+#'
+#' @return A character vector of normalized ISNIs. Invalid, unsupported, or
+#'   checksum-failing inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_isni <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    is_orcid_hyph <- grepl("^\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9Xx]$", y)
+    y[is_orcid_hyph] <- NA_character_
+
+    bare_pat <- .isni_pat()
+    has_marker <- grepl("isni\\.org/isni/", y, ignore.case = TRUE) |
+        grepl("(?i)^urn:isni:", y, perl = TRUE) |
+        grepl("(?i)^isni[[:space:]]", y, perl = TRUE) |
+        grepl("viaf\\.org/viaf/sourceID/ISNI", y, ignore.case = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE) |
+        grepl("(?i)^(?:\\d{4}[[:space:]]?){3}\\d{3}[0-9X]$", y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub("^https?://isni\\.org/isni/", "", y, ignore.case = TRUE)
+    y <- sub("(?i)^urn:isni:", "", y, perl = TRUE)
+    y <- sub("(?i)^isni[[:space:]]*:?[[:space:]]*", "", y, perl = TRUE)
+    y <- sub(
+        "(?i)^https?://viaf\\.org/viaf/sourceID/ISNI(?:%7C|\\|)",
+        "",
+        y,
+        perl = TRUE
+    )
+    y <- toupper(gsub("[-[:space:]]", "", y))
+
+    y[!is.na(y) & !is_isni(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
 }
 
 
@@ -111,11 +257,8 @@ normalize_doi <- function(x) {
 #'
 #' @noRd
 normalize_orcid <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
-
-    ok <- !is.na(x)
-    y <- trimws(x[ok])
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
 
     y <- sub("^https?://orcid\\.org/", "", y, ignore.case = TRUE)
     y <- sub("^orcid\\s*:\\s*", "", y, ignore.case = TRUE)
@@ -146,8 +289,421 @@ normalize_orcid <- function(x) {
 
     y[!is.na(y) & !is_orcid(y)] <- NA_character_
 
-    out[ok] <- y
-    out
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize UniProt accession numbers
+#'
+#' @description
+#' Normalizes UniProtKB accession numbers from UniProt or identifiers.org
+#' URLs, `uniprot:`-prefixed strings, or bare accessions to canonical uppercase
+#' form.
+#'
+#' Normalization requires structurally valid accession numbers. Registry
+#' existence is not checked.
+#'
+#' @param x A vector of UniProt values.
+#'
+#' @return A character vector of normalized UniProt accessions. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_uniprot <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .uniprot_pat()
+    has_marker <- grepl("uniprot\\.org/(?:uniprot|uniprotkb)/", y, ignore.case = TRUE) |
+        grepl("identifiers\\.org/uniprot/", y, ignore.case = TRUE) |
+        grepl("(?i)^uniprot:", y, perl = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://(?:www\\.)?uniprot\\.org/(?:uniprot|uniprotkb)/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/uniprot/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^uniprot:", "", y, perl = TRUE)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_uniprot(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize RefSeq accession numbers
+#'
+#' @description
+#' Normalizes RefSeq accessions from NCBI or identifiers.org URLs,
+#' `refseq:`-prefixed strings, or bare accessions to canonical uppercase form
+#' with a version suffix.
+#'
+#' Normalization requires structurally valid accession numbers. Registry
+#' existence is not checked.
+#'
+#' @param x A vector of RefSeq values.
+#'
+#' @return A character vector of normalized RefSeq accessions. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_refseq <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .refseq_pat()
+    has_marker <- grepl(
+        "ncbi\\.nlm\\.nih\\.gov/(?:nuccore|protein)/",
+        y,
+        ignore.case = TRUE
+    ) |
+        grepl("identifiers\\.org/refseq/", y, ignore.case = TRUE) |
+        grepl("(?i)^refseq:", y, perl = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/(?:nuccore|protein)/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/refseq/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^refseq:", "", y, perl = TRUE)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_refseq(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize SRA accession numbers
+#'
+#' @description
+#' Normalizes SRA accessions from NCBI or identifiers.org URLs,
+#' `sra:`-prefixed strings, or bare accessions to canonical uppercase form.
+#'
+#' Normalization requires structurally valid accession numbers. Registry
+#' existence is not checked.
+#'
+#' @param x A vector of SRA values.
+#'
+#' @return A character vector of normalized SRA accessions. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_sra <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .sra_pat()
+    has_marker <- grepl("ncbi\\.nlm\\.nih\\.gov/sra/", y, ignore.case = TRUE) |
+        grepl("identifiers\\.org/sra/", y, ignore.case = TRUE) |
+        grepl("(?i)^sra:", y, perl = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/sra/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/sra/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^sra:", "", y, perl = TRUE)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_sra(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize GEO accession numbers
+#'
+#' @description
+#' Normalizes GEO accessions from NCBI or identifiers.org URLs,
+#' `geo:`-prefixed strings, or bare accessions to canonical uppercase form.
+#'
+#' Normalization requires structurally valid accession numbers. Registry
+#' existence is not checked.
+#'
+#' @param x A vector of GEO values.
+#'
+#' @return A character vector of normalized GEO accessions. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_geo <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .geo_pat()
+    has_marker <- grepl(
+        "ncbi\\.nlm\\.nih\\.gov/geo/query/acc\\.cgi",
+        y,
+        ignore.case = TRUE
+    ) |
+        grepl("identifiers\\.org/geo/", y, ignore.case = TRUE) |
+        grepl("(?i)^geo:", y, perl = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/geo/query/acc\\.cgi\\?acc=",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/geo/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^geo:", "", y, perl = TRUE)
+    y <- sub("[?#].*$", "", y)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_geo(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize BioProject accession numbers
+#'
+#' @description
+#' Normalizes BioProject accessions from NCBI or identifiers.org URLs,
+#' `bioproject:`-prefixed strings, or bare accessions to canonical uppercase
+#' form.
+#'
+#' Normalization requires structurally valid accession numbers. Registry
+#' existence is not checked.
+#'
+#' @param x A vector of BioProject values.
+#'
+#' @return A character vector of normalized BioProject accessions. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_bioproject <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .bioproject_pat()
+    has_marker <- grepl("ncbi\\.nlm\\.nih\\.gov/bioproject", y, ignore.case = TRUE) |
+        grepl("identifiers\\.org/bioproject", y, ignore.case = TRUE) |
+        grepl("(?i)^bioproject:", y, perl = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/bioproject/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/bioproject[:/]",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^bioproject:", "", y, perl = TRUE)
+    y <- sub("(?i)^\\?term=", "", y, perl = TRUE)
+    y <- sub("[?#].*$", "", y)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_bioproject(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize genome assembly accession numbers
+#'
+#' @description
+#' Normalizes INSDC assembly accessions from NCBI or identifiers.org URLs,
+#' `assembly:`-prefixed strings, or bare accessions to canonical uppercase form
+#' with a version suffix.
+#'
+#' Normalization requires structurally valid accession numbers. Registry
+#' existence is not checked.
+#'
+#' @param x A vector of assembly values.
+#'
+#' @return A character vector of normalized assembly accessions. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_assembly <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .assembly_pat()
+    has_marker <- grepl(
+        "ncbi\\.nlm\\.nih\\.gov/(?:assembly|datasets/genome)/",
+        y,
+        ignore.case = TRUE
+    ) |
+        grepl("identifiers\\.org/insdc\\.(?:gca|gcf):", y, ignore.case = TRUE) |
+        grepl("(?i)^assembly:", y, perl = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/(?:assembly|datasets/genome)/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/insdc\\.(?:gca|gcf):",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^assembly:", "", y, perl = TRUE)
+    y <- sub("/+$", "", y)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_assembly(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize ROR identifiers
+#'
+#' @description
+#' Normalizes ROR iDs from URL-prefixed, label-prefixed, or compact forms to
+#' canonical lowercase compact form.
+#'
+#' Normalization requires checksum-valid identifiers.
+#'
+#' @param x A vector of ROR values.
+#'
+#' @return A character vector of normalized ROR iDs. Invalid or
+#'   checksum-failing inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_ror <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+
+    y <- sub("^https?://ror\\.org/", "", y, ignore.case = TRUE)
+    y <- sub("^ror\\.org/", "", y, ignore.case = TRUE)
+    y <- sub("^ror\\s*:?\\s*", "", y, ignore.case = TRUE)
+    y <- sub("/+$", "", y)
+    y <- tolower(y)
+
+    y[!is.na(y) & !is_ror(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize RRID identifiers
+#'
+#' @description
+#' Normalizes Research Resource Identifiers from resolver URLs or labeled forms
+#' to canonical `RRID:` form. Inputs must include an explicit `RRID:` label
+#' or a supported resolver URL; bare local IDs are rejected.
+#'
+#' Normalization requires structurally valid identifiers for known RRID
+#' authorities.
+#'
+#' @param x A vector of RRID values.
+#'
+#' @return A character vector of normalized RRIDs. Invalid or unsupported
+#'   inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_rrid <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+
+    has_marker <- grepl("RRID\\s*:", y, ignore.case = TRUE) |
+        grepl("scicrunch\\.org/resolver/", y, ignore.case = TRUE) |
+        grepl("identifiers\\.org/", y, ignore.case = TRUE) |
+        grepl("n2t\\.net/", y, ignore.case = TRUE) |
+        grepl("bioregistry\\.io/rrid:", y, ignore.case = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://scicrunch\\.org/resolver/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://identifiers\\.org/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://n2t\\.net/rrid:",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub(
+        "^https?://bioregistry\\.io/rrid:",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("^RRID[[:space:]]*:[[:space:]]*", "RRID:", y, ignore.case = TRUE)
+    y <- sub("[[:punct:]]+$", "", y)
+
+    y[!is.na(y) & !is_rrid(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
 }
 
 
@@ -165,19 +721,11 @@ normalize_orcid <- function(x) {
 #'
 #' @noRd
 normalize_isbn <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
+    init <- .scholid_init_na_character(x)
 
-    ok <- !is.na(x)
-
-    out[ok] <- vapply(x[ok], function(s) {
+    init$out[init$ok] <- vapply(init$x[init$ok], function(s) {
         s <- trimws(s)
-        s <- sub(
-            "^(?i:isbn(?:-1[03])?)\\s*:?\\s*",
-            "",
-            s,
-            perl = TRUE
-        )
+        s <- .strip_isbn_label(s)
 
         if (!.isbn_format_ok(s)) {
             return(NA_character_)
@@ -199,7 +747,7 @@ normalize_isbn <- function(x) {
         y
     }, character(1))
 
-    out
+    init$out
 }
 
 
@@ -215,11 +763,8 @@ normalize_isbn <- function(x) {
 #'
 #' @noRd
 normalize_issn <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
-
-    ok <- !is.na(x)
-    y <- trimws(x[ok])
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
 
     # Remove only an optional ISSN label at the beginning
     y <- sub("^ISSN\\s*:?[[:space:]]*", "", y, ignore.case = TRUE)
@@ -249,8 +794,8 @@ normalize_issn <- function(x) {
     # Keep only checksum-valid ISSNs
     y[!is.na(y) & !is_issn(y)] <- NA_character_
 
-    out[ok] <- y
-    out
+    init$out[init$ok] <- y
+    init$out
 }
 
 
@@ -265,23 +810,106 @@ normalize_issn <- function(x) {
 #'
 #' @noRd
 normalize_arxiv <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
-
-    ok <- !is.na(x)
-    y <- trimws(x[ok])
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
 
     y <- sub("^arXiv:\\s*", "", y, ignore.case = TRUE)
     y <- sub("^https?://arxiv\\.org/abs/", "", y, ignore.case = TRUE)
 
-    reg <- .scholid_registry()[["arxiv"]]
-    pat1 <- reg$pat1
-    pat2 <- reg$pat2
+    y[!is.na(y) & !is_arxiv(y)] <- NA_character_
 
-    y[!(grepl(pat1, y) | grepl(pat2, y))] <- NA_character_
+    init$out[init$ok] <- y
+    init$out
+}
 
-    out[ok] <- y
-    out
+
+#' Normalize ADS bibcodes
+#'
+#' @description
+#' Normalizes SAO/NASA ADS bibliographic codes from ADS URLs, `bibcode:`
+#' labels, or bare 19-character strings to canonical bibcode form. Case is
+#' preserved.
+#'
+#' Normalization requires structurally valid bibcodes. ADS existence is not
+#' checked.
+#'
+#' @param x A vector of bibcode values.
+#'
+#' @return A character vector of normalized bibcodes. Invalid or unsupported
+#'   inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_bibcode <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+    y <- sub("[.,;:!?]+$", "", y)
+
+    bare_pat <- .bibcode_pat()
+    has_marker <- grepl("adsabs\\.harvard\\.edu", y, ignore.case = TRUE) |
+        grepl("(?i)^bibcode\\s*:", y, perl = TRUE) |
+        grepl(bare_pat, y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub(
+        "^https?://(?:ui\\.)?adsabs\\.harvard\\.edu/abs/",
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("(?i)^bibcode\\s*:?\\s*", "", y, perl = TRUE)
+
+    y[!is.na(y) & !is_bibcode(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
+}
+
+
+#' Normalize OpenAlex identifiers
+#'
+#' @description
+#' Normalizes OpenAlex IDs from `openalex.org` or `api.openalex.org` URLs to
+#' canonical uppercase key form. Inputs must include an explicit OpenAlex URL
+#' or a bare key matching the structural pattern; other strings are rejected.
+#'
+#' Normalization requires structurally valid identifiers. Registry existence
+#' is not checked.
+#'
+#' @param x A vector of OpenAlex values.
+#'
+#' @return A character vector of normalized OpenAlex IDs. Invalid or
+#'   unsupported inputs yield `NA_character_`.
+#'
+#' @noRd
+normalize_openalex <- function(x) {
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
+
+    bare_pat <- .openalex_key_pat()
+    has_marker <- grepl("openalex\\.org/", y, ignore.case = TRUE) |
+        grepl(paste0("(?i)", bare_pat), y, perl = TRUE)
+
+    y[!has_marker] <- NA_character_
+
+    y <- sub("^https?://openalex\\.org/", "", y, ignore.case = TRUE)
+    y <- sub(
+        paste0(
+            "^https?://api\\.openalex\\.org/",
+            "(?:works|authors|sources|institutions|topics|keywords|",
+            "publishers|funders|grants|concepts)/"
+        ),
+        "",
+        y,
+        ignore.case = TRUE
+    )
+    y <- sub("[[:punct:]]+$", "", y)
+    y <- toupper(y)
+
+    y[!is.na(y) & !is_openalex(y)] <- NA_character_
+
+    init$out[init$ok] <- y
+    init$out
 }
 
 
@@ -296,11 +924,8 @@ normalize_arxiv <- function(x) {
 #'
 #' @noRd
 normalize_pmid <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
-
-    ok <- !is.na(x)
-    y <- trimws(x[ok])
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
 
     y <- sub(
         "^PMID(?:[[:space:]]*:[[:space:]]*|[[:space:]]+)",
@@ -309,11 +934,10 @@ normalize_pmid <- function(x) {
         ignore.case = TRUE
     )
 
-    pat <- .scholid_registry()[["pmid"]]$pat
-    y[!grepl(pat, y, perl = TRUE)] <- NA_character_
+    y[!is.na(y) & !is_pmid(y)] <- NA_character_
 
-    out[ok] <- y
-    out
+    init$out[init$ok] <- y
+    init$out
 }
 
 
@@ -334,11 +958,8 @@ normalize_pmid <- function(x) {
 #'
 #' @noRd
 normalize_pmcid <- function(x) {
-    x <- as.character(x)
-    out <- rep(NA_character_, length(x))
-
-    ok <- !is.na(x)
-    y <- trimws(x[ok])
+    init <- .scholid_init_na_character(x)
+    y <- trimws(init$x[init$ok])
 
     had_label <- grepl(
         "^PMCID\\s*:?[[:space:]]*",
@@ -358,9 +979,8 @@ normalize_pmcid <- function(x) {
     needs_prefix <- had_label & grepl("^\\d+$", y)
     y[needs_prefix] <- paste0("PMC", y[needs_prefix])
 
-    pat <- .scholid_registry()[["pmcid"]]$pat
-    y[!grepl(pat, y, perl = TRUE)] <- NA_character_
+    y[!is.na(y) & !is_pmcid(y)] <- NA_character_
 
-    out[ok] <- y
-    out
+    init$out[init$ok] <- y
+    init$out
 }

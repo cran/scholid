@@ -21,15 +21,17 @@ Vectorized normalizer that converts supported scholarly identifier values
 to a canonical form (e.g., removing URL prefixes, labels, or separators).
 
 Normalization requires that inputs match the expected identifier structure.
-For identifier types with checksum algorithms, normalization also requires
-checksum-valid values. Inputs that do not meet these requirements yield
-\code{NA_character_}.
+For identifier types with checksum algorithms (ORCID, ROR, ISNI, ISBN, ISSN),
+normalization also requires checksum-valid values. Inputs that do not meet
+these requirements yield \code{NA_character_}.
 
 Normalized outputs are canonical, type-specific representations of valid
 identifiers.
 
-Use \code{\link[=is_scholid]{is_scholid()}} to test whether values are fully valid identifiers,
-including checksum verification where applicable.
+Use \code{\link[=is_scholid]{is_scholid()}} to test whether already-canonical values are valid
+identifiers of a given type. Both functions apply checksum verification
+where applicable; normalization additionally accepts wrapped input forms
+and returns canonical strings.
 }
 \examples{
 normalize_scholid("https://doi.org/10.1000/182", "doi")

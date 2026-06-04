@@ -374,13 +374,23 @@ implementations such as <code>is_doi()</code>,
 <div id="supported-identifier-types" class="section level2">
 <h2>Supported identifier types</h2>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>scholid<span class="sc">::</span><span class="fu">scholid_types</span>()</span></code></pre></div>
-<pre><code>## [1] &quot;arxiv&quot; &quot;doi&quot;   &quot;isbn&quot;  &quot;issn&quot;  &quot;orcid&quot; &quot;pmcid&quot; &quot;pmid&quot;</code></pre>
+<pre><code>##  [1] &quot;doi&quot;        &quot;arxiv&quot;      &quot;bibcode&quot;    &quot;openalex&quot;   &quot;swhid&quot;     
+##  [6] &quot;ark&quot;        &quot;isni&quot;       &quot;orcid&quot;      &quot;ror&quot;        &quot;rrid&quot;      
+## [11] &quot;uniprot&quot;    &quot;refseq&quot;     &quot;sra&quot;        &quot;geo&quot;        &quot;bioproject&quot;
+## [16] &quot;assembly&quot;   &quot;isbn&quot;       &quot;issn&quot;       &quot;pmcid&quot;      &quot;pmid&quot;</code></pre>
+<p>For per-type formats, validation rules, and classification order, see
+the <strong>How Scholarly Identifiers Are Defined</strong> vignette
+(<code>vignette(&quot;scholid_definitions&quot;, package = &quot;scholid&quot;)</code>),
+also linked from the package site as <em>About identifiers</em>.</p>
 </div>
 <div id="detect-is_scholid" class="section level2">
 <h2>Detect: <code>is_scholid()</code></h2>
-<p><code>is_scholid()</code> checks whether each value matches a
-specific identifier type. It is vectorized and preserves missing
-values.</p>
+<p><code>is_scholid()</code> checks whether each value is a valid
+identifier of a specific type. It expects canonical (or near-canonical)
+input; wrapped forms such as URLs should be normalized first. For
+checksum-based types (ORCID, ISBN, ISSN), both <code>is_scholid()</code>
+and <code>normalize_scholid()</code> verify the checksum. It is
+vectorized and preserves missing values.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>    <span class="st">&quot;10.1000/182&quot;</span>,</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    <span class="st">&quot;not a doi&quot;</span>,</span>
@@ -523,16 +533,18 @@ conservatively:</p>
 <pre><code>## [1] &quot;orcid&quot; &quot;doi&quot;   &quot;issn&quot;</code></pre>
 <p><code>detect_scholid_type()</code> does not modify values. Once the
 identifier type is known, use <code>normalize_scholid()</code> to
-convert to canonical form and <code>is_scholid()</code> for strict
-validation.</p>
+convert wrapped input to canonical form and <code>is_scholid()</code> to
+validate already-canonical values. Both apply checksum verification
+where applicable.</p>
 <p>A typical workflow for messy data is:</p>
 <ol style="list-style-type: decimal">
 <li>Detect identifier types.</li>
 <li>Normalize by detected type.</li>
 <li>Validate canonical identifiers.</li>
 </ol>
-<p>This separation keeps detection permissive and normalization
-predictable, while preserving strict validation where needed.</p>
+<p>This separation keeps detection permissive, normalization focused on
+canonicalization of wrapped input, and validation available for
+already-canonical strings.</p>
 </div>
 <div id="design-notes" class="section level2">
 <h2>Design notes</h2>

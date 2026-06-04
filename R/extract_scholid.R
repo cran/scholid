@@ -33,23 +33,11 @@ extract_scholid <- function(
         )
     type <- .scholid_match_type(type)
 
-    fun_name <- paste0(
-        "extract_",
-        type
-        )
-    fun <- get0(
-        fun_name,
-        mode = "function",
-        inherits = TRUE
-        )
-
-    # nocov start
-    if (is.null(fun)) {
-        stop("Missing implementation: ", fun_name, "().", call. = FALSE)
-    }
-    # nocov end
-
-    fun(text)
+    .scholid_dispatch(
+        type   = type,
+        prefix = "extract_",
+        x      = text
+    )
 }
 
 
@@ -72,29 +60,61 @@ extract_scholid <- function(
 #'
 #' @noRd
 extract_doi <- function(text) {
-    pat <- "(?<![[:alnum:]_])(10\\.[0-9]{4,9}/\\S+)"
-    out <- .extract_with_pattern(
-        text = text,
-        pat  = pat
+    .scholid_extract_validated(
+        text        = text,
+        type        = "doi",
+        clean_fn    = .clean_extracted_doi,
+        validate_fn = is_doi
     )
+}
 
-    lapply(out, function(hits) {
-        if (!length(hits)) {
-            return(character(0))
-        }
 
-        cleaned <- vapply(
-            hits,
-            .clean_extracted_doi,
-            character(1),
-            USE.NAMES = FALSE
-        )
+#' Extract ARK identifiers from text
+#'
+#' @description
+#' Extracts Archival Resource Keys from free text or resolver URLs.
+#'
+#' Extracted ARK candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only structurally valid ARKs are
+#' returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted ARKs.
+#'
+#' @noRd
+extract_ark <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "ark",
+        clean_fn    = .clean_extracted_ark,
+        validate_fn = is_ark
+    )
+}
 
-        cleaned <- cleaned[nzchar(cleaned)]
-        cleaned <- cleaned[!is.na(cleaned)]
-        cleaned <- cleaned[is_doi(cleaned)]
-        cleaned
-    })
+
+#' Extract ISNI identifiers from text
+#'
+#' @description
+#' Extracts International Standard Name Identifiers from free text, labels,
+#' or resolver URLs.
+#'
+#' Extracted ISNI candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only checksum-valid compact ISNIs
+#' are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted ISNIs.
+#'
+#' @noRd
+extract_isni <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "isni",
+        clean_fn    = .clean_extracted_isni,
+        validate_fn = is_isni
+    )
 }
 
 
@@ -103,16 +123,212 @@ extract_doi <- function(text) {
 #' @description
 #' Extracts ORCID iDs from free text or URLs.
 #'
+#' Extracted ORCID candidates are cleaned to remove trailing prose punctuation
+#' where necessary, and only checksum-valid ORCID iDs are returned.
+#'
 #' @param text A character vector of text.
 #'
 #' @return A list of character vectors of extracted ORCID iDs.
 #'
 #' @noRd
 extract_orcid <- function(text) {
-    pat <- "(\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9X])"
-    .extract_with_pattern(
-        text = text,
-        pat  = pat
+    .scholid_extract_validated(
+        text        = text,
+        type        = "orcid",
+        clean_fn    = .clean_extracted_trailing_punct,
+        validate_fn = is_orcid
+    )
+}
+
+
+#' Extract UniProt accession numbers from text
+#'
+#' @description
+#' Extracts UniProtKB accession numbers from free text or resolver URLs.
+#'
+#' Extracted UniProt candidates are cleaned to remove URL prefixes and
+#' trailing prose punctuation where necessary, and only structurally valid
+#' accessions are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted UniProt accessions.
+#'
+#' @noRd
+extract_uniprot <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "uniprot",
+        clean_fn    = .clean_extracted_uniprot,
+        validate_fn = is_uniprot
+    )
+}
+
+
+#' Extract RefSeq accession numbers from text
+#'
+#' @description
+#' Extracts RefSeq accessions from free text or URLs.
+#'
+#' Extracted RefSeq candidates are cleaned to remove URL prefixes and
+#' trailing prose punctuation where necessary, and only structurally valid
+#' accessions are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted RefSeq accessions.
+#'
+#' @noRd
+extract_refseq <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "refseq",
+        clean_fn    = .clean_extracted_refseq,
+        validate_fn = is_refseq
+    )
+}
+
+
+#' Extract SRA accession numbers from text
+#'
+#' @description
+#' Extracts SRA accessions from free text or URLs.
+#'
+#' Extracted SRA candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only structurally valid accessions
+#' are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted SRA accessions.
+#'
+#' @noRd
+extract_sra <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "sra",
+        clean_fn    = .clean_extracted_sra,
+        validate_fn = is_sra
+    )
+}
+
+
+#' Extract GEO accession numbers from text
+#'
+#' @description
+#' Extracts GEO accessions from free text or URLs.
+#'
+#' Extracted GEO candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only structurally valid accessions
+#' are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted GEO accessions.
+#'
+#' @noRd
+extract_geo <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "geo",
+        clean_fn    = .clean_extracted_geo,
+        validate_fn = is_geo
+    )
+}
+
+
+#' Extract BioProject accession numbers from text
+#'
+#' @description
+#' Extracts BioProject accessions from free text or URLs.
+#'
+#' Extracted BioProject candidates are cleaned to remove URL prefixes and
+#' trailing prose punctuation where necessary, and only structurally valid
+#' accessions are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted BioProject accessions.
+#'
+#' @noRd
+extract_bioproject <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "bioproject",
+        clean_fn    = .clean_extracted_bioproject,
+        validate_fn = is_bioproject
+    )
+}
+
+
+#' Extract genome assembly accession numbers from text
+#'
+#' @description
+#' Extracts INSDC assembly accessions from free text or URLs.
+#'
+#' Extracted assembly candidates are cleaned to remove URL prefixes and
+#' trailing prose punctuation where necessary, and only structurally valid
+#' accessions are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted assembly accessions.
+#'
+#' @noRd
+extract_assembly <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "assembly",
+        clean_fn    = .clean_extracted_assembly,
+        validate_fn = is_assembly
+    )
+}
+
+
+#' Extract ROR identifiers from text
+#'
+#' @description
+#' Extracts ROR iDs from free text or URLs.
+#'
+#' Extracted ROR candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only checksum-valid ROR iDs are
+#' returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted ROR iDs.
+#'
+#' @noRd
+extract_ror <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "ror",
+        clean_fn    = .clean_extracted_ror,
+        validate_fn = is_ror
+    )
+}
+
+
+#' Extract RRID identifiers from text
+#'
+#' @description
+#' Extracts Research Resource Identifiers from free text or resolver URLs.
+#'
+#' Extracted RRID candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only structurally valid RRIDs for
+#' known authorities are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted RRIDs.
+#'
+#' @noRd
+extract_rrid <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "rrid",
+        clean_fn    = .clean_extracted_rrid,
+        validate_fn = is_rrid
     )
 }
 
@@ -128,29 +344,12 @@ extract_orcid <- function(text) {
 #'
 #' @noRd
 extract_isbn <- function(text) {
-    pat <- "(?<![[:alnum:]_])([0-9Xx][0-9Xx\\- ]{8,16}[0-9Xx])(?![[:alnum:]_\\-/])"
-    out <- .extract_with_pattern(
-        text = text,
-        pat  = pat
+    .scholid_extract_validated(
+        text        = text,
+        type        = "isbn",
+        clean_fn    = .clean_extracted_trailing_punct,
+        validate_fn = is_isbn
     )
-
-    lapply(out, function(hits) {
-        if (!length(hits)) {
-            return(character(0))
-        }
-
-        cleaned <- vapply(
-            hits,
-            .clean_extracted_isbn,
-            character(1),
-            USE.NAMES = FALSE
-        )
-
-        cleaned <- cleaned[nzchar(cleaned)]
-        cleaned <- cleaned[!is.na(cleaned)]
-        cleaned <- cleaned[is_isbn(cleaned)]
-        cleaned
-    })
 }
 
 
@@ -165,29 +364,12 @@ extract_isbn <- function(text) {
 #'
 #' @noRd
 extract_issn <- function(text) {
-    pat <- "(?<![[:alnum:]_\\-])(\\d{4}-\\d{3}[0-9Xx])(?![[:alnum:]_\\-])"
-    out <- .extract_with_pattern(
-        text = text,
-        pat  = pat
+    .scholid_extract_validated(
+        text        = text,
+        type        = "issn",
+        clean_fn    = .clean_extracted_trailing_punct,
+        validate_fn = is_issn
     )
-
-    lapply(out, function(hits) {
-        if (!length(hits)) {
-            return(character(0))
-        }
-
-        cleaned <- vapply(
-            hits,
-            .clean_extracted_issn,
-            character(1),
-            USE.NAMES = FALSE
-        )
-
-        cleaned <- cleaned[nzchar(cleaned)]
-        cleaned <- cleaned[!is.na(cleaned)]
-        cleaned <- cleaned[is_issn(cleaned)]
-        cleaned
-    })
 }
 
 
@@ -202,38 +384,84 @@ extract_issn <- function(text) {
 #'
 #' @noRd
 extract_arxiv <- function(text) {
-    pat <- paste0(
-        "(?<![[:alnum:]_\\./-])",
-        "(",
-        "\\d{4}\\.\\d{4,5}(v\\d+)?",
-        "|",
-        "[a-z\\-]+/\\d{7}(v\\d+)?",
-        ")",
-        "(?![[:alnum:]_\\-/])"
+    .scholid_extract_validated(
+        text        = text,
+        type        = "arxiv",
+        clean_fn    = .clean_extracted_trailing_punct,
+        validate_fn = is_arxiv
     )
+}
 
-    out <- .extract_with_pattern(
-        text = text,
-        pat  = pat
+
+#' Extract ADS bibcodes from text
+#'
+#' @description
+#' Extracts SAO/NASA ADS bibliographic codes from free text or ADS URLs.
+#'
+#' Extracted bibcode candidates are cleaned to remove URL prefixes and
+#' trailing prose punctuation where necessary, and only structurally valid
+#' bibcodes are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted bibcodes.
+#'
+#' @noRd
+extract_bibcode <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "bibcode",
+        clean_fn    = .clean_extracted_bibcode,
+        validate_fn = is_bibcode
     )
+}
 
-    lapply(out, function(hits) {
-        if (!length(hits)) {
-            return(character(0))
-        }
 
-        cleaned <- vapply(
-            hits,
-            .clean_extracted_arxiv,
-            character(1),
-            USE.NAMES = FALSE
-        )
+#' Extract OpenAlex identifiers from text
+#'
+#' @description
+#' Extracts OpenAlex IDs from free text or OpenAlex URLs.
+#'
+#' Extracted OpenAlex candidates are cleaned to remove URL prefixes and
+#' trailing prose punctuation where necessary, and only structurally valid
+#' identifiers are returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted OpenAlex IDs.
+#'
+#' @noRd
+extract_openalex <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "openalex",
+        clean_fn    = .clean_extracted_openalex,
+        validate_fn = is_openalex
+    )
+}
 
-        cleaned <- cleaned[nzchar(cleaned)]
-        cleaned <- cleaned[!is.na(cleaned)]
-        cleaned <- cleaned[is_arxiv(cleaned)]
-        cleaned
-    })
+
+#' Extract SWHID identifiers from text
+#'
+#' @description
+#' Extracts Software Heritage identifiers from free text or resolver URLs.
+#'
+#' Extracted SWHID candidates are cleaned to remove URL prefixes and trailing
+#' prose punctuation where necessary, and only structurally valid SWHIDs are
+#' returned.
+#'
+#' @param text A character vector of text.
+#'
+#' @return A list of character vectors of extracted SWHIDs.
+#'
+#' @noRd
+extract_swhid <- function(text) {
+    .scholid_extract_validated(
+        text        = text,
+        type        = "swhid",
+        clean_fn    = .clean_extracted_swhid,
+        validate_fn = is_swhid
+    )
 }
 
 
@@ -248,34 +476,12 @@ extract_arxiv <- function(text) {
 #'
 #' @noRd
 extract_pmid <- function(text) {
-    pat <- paste0(
-        "(?<![[:alnum:]_./-]|PMC)",
-        "\\d{4,9}",
-        "(?![[:alnum:]_]|[-/.][[:alnum:]_])"
+    .scholid_extract_validated(
+        text        = text,
+        type        = "pmid",
+        clean_fn    = .clean_extracted_trailing_punct,
+        validate_fn = is_pmid
     )
-
-    out <- .extract_with_pattern(
-        text = text,
-        pat  = pat
-    )
-
-    lapply(out, function(hits) {
-        if (!length(hits)) {
-            return(character(0))
-        }
-
-        cleaned <- vapply(
-            hits,
-            .clean_extracted_pmid,
-            character(1),
-            USE.NAMES = FALSE
-        )
-
-        cleaned <- cleaned[nzchar(cleaned)]
-        cleaned <- cleaned[!is.na(cleaned)]
-        cleaned <- cleaned[is_pmid(cleaned)]
-        cleaned
-    })
 }
 
 
@@ -290,29 +496,12 @@ extract_pmid <- function(text) {
 #'
 #' @noRd
 extract_pmcid <- function(text) {
-    pat <- "(?<![[:alnum:]_./-])PMC\\d+(?![[:alnum:]_]|[-/.][[:alnum:]_])"
-    out <- .extract_with_pattern(
-        text = text,
-        pat  = pat
+    .scholid_extract_validated(
+        text        = text,
+        type        = "pmcid",
+        clean_fn    = .clean_extracted_trailing_punct,
+        validate_fn = is_pmcid
     )
-
-    lapply(out, function(hits) {
-        if (!length(hits)) {
-            return(character(0))
-        }
-
-        cleaned <- vapply(
-            hits,
-            .clean_extracted_pmcid,
-            character(1),
-            USE.NAMES = FALSE
-        )
-
-        cleaned <- cleaned[nzchar(cleaned)]
-        cleaned <- cleaned[!is.na(cleaned)]
-        cleaned <- cleaned[is_pmcid(cleaned)]
-        cleaned
-    })
 }
 
 
@@ -354,6 +543,412 @@ extract_pmcid <- function(text) {
     }
 
     out
+}
+
+
+#' Clean, filter, and validate extracted identifier candidates
+#'
+#' @description
+#' Internal helper that post-processes regex extraction results. Each list
+#' element is cleaned with `clean_fn`, then filtered to non-empty values and
+#' validated with `validate_fn`.
+#'
+#' @param out A list of character vectors of raw regex matches.
+#' @param clean_fn Function applied to each raw match.
+#' @param validate_fn Vectorized validator returning logical values.
+#'
+#' @return A list of character vectors of validated identifiers.
+#'
+#' @noRd
+.extract_filter_validate <- function(
+        out,
+        clean_fn,
+        validate_fn
+) {
+    lapply(out, function(hits) {
+        if (!length(hits)) {
+            return(character(0))
+        }
+
+        cleaned <- vapply(
+            hits,
+            clean_fn,
+            character(1),
+            USE.NAMES = FALSE
+        )
+
+        cleaned <- cleaned[nzchar(cleaned)]
+        cleaned <- cleaned[!is.na(cleaned)]
+        cleaned <- cleaned[validate_fn(cleaned)]
+        cleaned
+    })
+}
+
+
+#' Extract and validate identifiers using registry patterns
+#'
+#' @description
+#' Internal helper that extracts identifier candidates from free text using
+#' the registry `extract_pat` for a type, then cleans and validates matches.
+#'
+#' @param text A character vector of text.
+#' @param type A validated identifier type string.
+#' @param clean_fn Function applied to each raw match.
+#' @param validate_fn Vectorized validator returning logical values.
+#'
+#' @return A list of character vectors of validated identifiers.
+#'
+#' @noRd
+.scholid_extract_validated <- function(
+        text,
+        type,
+        clean_fn,
+        validate_fn
+) {
+    out <- .extract_with_pattern(
+        text = text,
+        pat  = .scholid_registry_extract_pat(type)
+    )
+
+    .extract_filter_validate(
+        out         = out,
+        clean_fn    = clean_fn,
+        validate_fn = validate_fn
+    )
+}
+
+
+#' Clean an extracted ROR candidate
+#'
+#' @description
+#' Removes URL prefixes, trailing punctuation, and surrounding whitespace
+#' from an extracted ROR candidate.
+#'
+#' @param x A single extracted ROR candidate.
+#'
+#' @return A cleaned ROR candidate string, or `""` if empty.
+#'
+#' @noRd
+.clean_extracted_bibcode <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://(?:ui\\.)?adsabs\\.harvard\\.edu/abs/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^bibcode\\s*:?\\s*", "", x, perl = TRUE)
+    x
+}
+
+
+.clean_extracted_openalex <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub("^https?://openalex\\.org/", "", x, ignore.case = TRUE)
+    x <- sub(
+        paste0(
+            "^https?://api\\.openalex\\.org/",
+            "(?:works|authors|sources|institutions|topics|keywords|",
+            "publishers|funders|grants|concepts)/"
+        ),
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("/+$", "", x)
+    toupper(x)
+}
+
+
+.clean_extracted_uniprot <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://(?:www\\.)?uniprot\\.org/(?:uniprot|uniprotkb)/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/uniprot/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^uniprot:", "", x, perl = TRUE)
+    toupper(x)
+}
+
+
+.clean_extracted_refseq <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/(?:nuccore|protein)/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/refseq/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^refseq:", "", x, perl = TRUE)
+    toupper(x)
+}
+
+
+.clean_extracted_sra <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/sra/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/sra/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^sra:", "", x, perl = TRUE)
+    toupper(x)
+}
+
+
+.clean_extracted_geo <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/geo/query/acc\\.cgi\\?acc=",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/geo/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^geo:", "", x, perl = TRUE)
+    x <- sub("[?#&].*$", "", x)
+    toupper(x)
+}
+
+
+.clean_extracted_bioproject <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/bioproject/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/bioproject[:/]",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^bioproject:", "", x, perl = TRUE)
+    x <- sub("(?i)^\\?term=", "", x, perl = TRUE)
+    x <- sub("[?#&].*$", "", x)
+    toupper(x)
+}
+
+
+.clean_extracted_assembly <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://www\\.ncbi\\.nlm\\.nih\\.gov/(?:assembly|datasets/genome)/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/insdc\\.(?:gca|gcf):",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("(?i)^assembly:", "", x, perl = TRUE)
+    x <- sub("/+$", "", x)
+    toupper(x)
+}
+
+
+.clean_extracted_ark <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    val <- .canonicalize_ark(trimws(x))
+    if (is.na(val)) {
+        ""
+    } else {
+        val
+    }
+}
+
+
+.clean_extracted_isni <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub("^https?://isni\\.org/isni/", "", x, ignore.case = TRUE)
+    x <- sub("(?i)^urn:isni:", "", x, perl = TRUE)
+    x <- sub("(?i)^isni[[:space:]]*:?[[:space:]]*", "", x, perl = TRUE)
+    x <- sub(
+        "(?i)^https?://viaf\\.org/viaf/sourceID/ISNI(?:%7C|\\|)",
+        "",
+        x,
+        perl = TRUE
+    )
+    toupper(gsub("[-[:space:]]", "", x))
+}
+
+
+.clean_extracted_ror <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub("^https?://ror\\.org/", "", x, ignore.case = TRUE)
+    x <- sub("^ror\\.org/", "", x, ignore.case = TRUE)
+    x <- sub("/+$", "", x)
+    tolower(x)
+}
+
+
+#' Clean an extracted RRID candidate
+#'
+#' @description
+#' Removes resolver URL prefixes, trailing punctuation, and surrounding
+#' whitespace from an extracted RRID candidate, and normalizes the `RRID:`
+#' label.
+#'
+#' @param x A single extracted RRID candidate.
+#'
+#' @return A cleaned RRID candidate string, or `""` if empty.
+#'
+#' @noRd
+.clean_extracted_rrid <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://scicrunch\\.org/resolver/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://n2t\\.net/rrid:",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub("^RRID[[:space:]]*:[[:space:]]*", "RRID:", x, ignore.case = TRUE)
+    x
+}
+
+
+#' Clean an extracted SWHID candidate
+#'
+#' @description
+#' Removes resolver URL prefixes, trailing prose punctuation, and surrounding
+#' whitespace from an extracted SWHID candidate, and canonicalizes the core
+#' identifier.
+#'
+#' @param x A single extracted SWHID candidate.
+#'
+#' @return A cleaned SWHID candidate string, or `""` if empty.
+#'
+#' @noRd
+.clean_extracted_swhid <- function(x) {
+    if (is.na(x) || !nzchar(x)) {
+        return("")
+    }
+
+    x <- sub("[.,;:!?\"']+$", "", x, perl = TRUE)
+    x <- trimws(x)
+    x <- sub(
+        "^https?://archive\\.softwareheritage\\.org/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://browse\\.softwareheritage\\.org/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- sub(
+        "^https?://identifiers\\.org/swh/",
+        "",
+        x,
+        ignore.case = TRUE
+    )
+    x <- gsub("[[:space:]]+", "", x)
+    x <- .canonicalize_swhid(x)
+    x
 }
 
 
@@ -400,106 +995,18 @@ extract_pmcid <- function(text) {
 }
 
 
-#' Clean an extracted ISBN candidate
+#' Clean trailing punctuation and whitespace from an extracted candidate
 #'
 #' @description
 #' Removes trailing punctuation and surrounding whitespace from an extracted
-#' ISBN candidate.
+#' identifier candidate.
 #'
-#' @param x A single extracted ISBN candidate.
+#' @param x A single extracted identifier candidate.
 #'
-#' @return A cleaned ISBN candidate string, or `""` if empty.
-#'
-#' @noRd
-.clean_extracted_isbn <- function(x) {
-    if (is.na(x) || !nzchar(x)) {
-        return("")
-    }
-
-    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
-    x <- trimws(x)
-    x
-}
-
-
-#' Clean an extracted ISSN candidate
-#'
-#' @description
-#' Removes trailing punctuation and surrounding whitespace from an extracted
-#' ISSN candidate.
-#'
-#' @param x A single extracted ISSN candidate.
-#'
-#' @return A cleaned ISSN candidate string, or `""` if empty.
+#' @return A cleaned candidate string, or `""` if empty.
 #'
 #' @noRd
-.clean_extracted_issn <- function(x) {
-    if (is.na(x) || !nzchar(x)) {
-        return("")
-    }
-
-    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
-    x <- trimws(x)
-    x
-}
-
-
-#' Clean an extracted arXiv candidate
-#'
-#' @description
-#' Removes trailing punctuation and surrounding whitespace from an extracted
-#' arXiv candidate.
-#'
-#' @param x A single extracted arXiv candidate.
-#'
-#' @return A cleaned arXiv candidate string, or `""` if empty.
-#'
-#' @noRd
-.clean_extracted_arxiv <- function(x) {
-    if (is.na(x) || !nzchar(x)) {
-        return("")
-    }
-
-    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
-    x <- trimws(x)
-    x
-}
-
-
-#' Clean an extracted PMID candidate
-#'
-#' @description
-#' Removes trailing punctuation and surrounding whitespace from an extracted
-#' PMID candidate.
-#'
-#' @param x A single extracted PMID candidate.
-#'
-#' @return A cleaned PMID candidate string, or `""` if empty.
-#'
-#' @noRd
-.clean_extracted_pmid <- function(x) {
-    if (is.na(x) || !nzchar(x)) {
-        return("")
-    }
-
-    x <- sub("[[:space:][:punct:]]+$", "", x, perl = TRUE)
-    x <- trimws(x)
-    x
-}
-
-
-#' Clean an extracted PMCID candidate
-#'
-#' @description
-#' Removes trailing punctuation and surrounding whitespace from an extracted
-#' PMCID candidate.
-#'
-#' @param x A single extracted PMCID candidate.
-#'
-#' @return A cleaned PMCID candidate string, or `""` if empty.
-#'
-#' @noRd
-.clean_extracted_pmcid <- function(x) {
+.clean_extracted_trailing_punct <- function(x) {
     if (is.na(x) || !nzchar(x)) {
         return("")
     }

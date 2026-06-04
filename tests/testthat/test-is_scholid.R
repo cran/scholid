@@ -228,6 +228,1340 @@ testthat::test_that(
 )
 
 testthat::test_that(
+    "is_ror accepts checksum-valid compact ROR iDs",
+    {
+        x <- c(
+            "02mhbdp94",
+            "01an7q238",
+            "02s376052"
+        )
+
+        testthat::expect_identical(
+            is_ror(x),
+            c(TRUE, TRUE, TRUE)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_ror rejects checksum-invalid and malformed ROR iDs",
+    {
+        x <- c(
+            "02mhbdp94",
+            "02mhbdp99",
+            "not-a-ror",
+            "02mhbdp9",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_ror(x),
+            c(TRUE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_ror for type ror",
+    {
+        x <- c("01an7q238", "02mhbdp99", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "ror"),
+            is_ror(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "ROR normalization canonicalizes valid non-canonical inputs",
+    {
+        x <- c(
+            "01an7q238",
+            "https://ror.org/01an7q238",
+            "ror.org/01an7q238",
+            "ROR: 01an7q238"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "ror"),
+            c(
+                "01an7q238",
+                "01an7q238",
+                "01an7q238",
+                "01an7q238"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized ROR outputs validate and classify as ror",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://ror.org/01an7q238",
+                "ROR: 02mhbdp94"
+            ),
+            "ror"
+        )
+
+        testthat::expect_true(all(is_ror(x)))
+        testthat::expect_true(all(is_scholid(x, "ror")))
+        testthat::expect_true(all(classify_scholid(x) == "ror"))
+    }
+)
+
+testthat::test_that(
+    "is_swhid accepts canonical core SWHIDs for known object types",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:dir:d198bc9d7a6bcf6db04f476d29314f157507d505",
+            "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+            "swh:1:rel:22ece559cc7cc2364edc5e5593d63ae8bd229f9f",
+            "swh:1:snp:c7c108084bc0bf3d81436bf980b46e98bd338453"
+        )
+
+        testthat::expect_identical(
+            is_swhid(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_swhid accepts canonical qualified SWHIDs with known qualifiers",
+    {
+        x <- paste0(
+            "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;",
+            "origin=https://example.org/repo.git;",
+            "visit=swh:1:snp:d7f1b9eb7ccb596c2622c4780febaa02549830f9;",
+            "lines=9-15"
+        )
+
+        testthat::expect_true(is_swhid(x))
+    }
+)
+
+testthat::test_that(
+    "is_swhid rejects bare hex strings, non-canonical casing, and invalid forms",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;unknown=foo",
+            "not-a-swhid",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_swhid(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_swhid for type swhid",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "94a9ed024d3859793618152ea559a168bbcbb5e2",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_scholid(x, "swhid"),
+            is_swhid(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "SWHID normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "https://archive.softwareheritage.org/swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "swhid"),
+            rep(
+                "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+                3L
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized SWHID outputs validate and classify as swhid",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://archive.softwareheritage.org/swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+                "SWH:1:DIR:d198bc9d7a6bcf6db04f476d29314f157507d505"
+            ),
+            "swhid"
+        )
+
+        testthat::expect_true(all(is_swhid(x)))
+        testthat::expect_true(all(is_scholid(x, "swhid")))
+        testthat::expect_true(all(classify_scholid(x) == "swhid"))
+    }
+)
+
+testthat::test_that(
+    "is_swhid accepts canonical SWHIDs for known object types",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:dir:d198bc9d7a6bcf6db04f476d29314f157507d505",
+            "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+            "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;origin=https://gitorious.org/ocamlp3l/ocamlp3l_cvs.git;visit=swh:1:snp:d7f1b9eb7ccb596c2622c4780febaa02549830f9;lines=9-15"
+        )
+
+        testthat::expect_identical(
+            is_swhid(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_swhid rejects bare hex strings and malformed SWHIDs",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:1:cnt:4d99d2d18326621ccdd70f5ea66c2e2ac236ad8b;unknown=foo",
+            "not-a-swhid",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_swhid(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_swhid for type swhid",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "swh:2:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_scholid(x, "swhid"),
+            is_swhid(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "SWHID normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "https://archive.softwareheritage.org/swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "swhid"),
+            rep(
+                "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+                3L
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized SWHID outputs validate and classify as swhid",
+    {
+        x <- normalize_scholid(
+            c("https://archive.softwareheritage.org/swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+              "SWH:1:CNT:94a9ed024d3859793618152ea559a168bbcbb5e2"
+            ),
+            "swhid"
+        )
+
+        testthat::expect_true(all(is_swhid(x)))
+        testthat::expect_true(all(is_scholid(x, "swhid")))
+        testthat::expect_true(all(classify_scholid(x) == "swhid"))
+    }
+)
+
+testthat::test_that(
+    "is_rrid accepts canonical RRIDs for known authorities",
+    {
+        x <- c(
+            "RRID:AB_262044",
+            "RRID:CVCL_2260",
+            "RRID:SCR_007358",
+            "RRID:IMSR_JAX:000664",
+            "RRID:MGI:3840442",
+            "RRID:Addgene_80088"
+        )
+
+        testthat::expect_identical(
+            is_rrid(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_rrid rejects bare local IDs and unknown authorities",
+    {
+        x <- c(
+            "RRID:AB_262044",
+            "AB_262044",
+            "RRID:UNKNOWN_123",
+            "not-a-rrid",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_rrid(x),
+            c(TRUE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_rrid for type rrid",
+    {
+        x <- c("RRID:AB_262044", "RRID:UNKNOWN_123", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "rrid"),
+            is_rrid(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "RRID normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "RRID:AB_262044",
+            "https://scicrunch.org/resolver/RRID:AB_262044",
+            "RRID: AB_262044",
+            "rrid:SCR_007358"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "rrid"),
+            c(
+                "RRID:AB_262044",
+                "RRID:AB_262044",
+                "RRID:AB_262044",
+                "RRID:SCR_007358"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized RRID outputs validate and classify as rrid",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://scicrunch.org/resolver/RRID:AB_262044",
+                "RRID: SCR_007358"
+            ),
+            "rrid"
+        )
+
+        testthat::expect_true(all(is_rrid(x)))
+        testthat::expect_true(all(is_scholid(x, "rrid")))
+        testthat::expect_true(all(classify_scholid(x) == "rrid"))
+    }
+)
+
+testthat::test_that(
+    "is_bibcode accepts canonical 19-character ADS bibcodes",
+    {
+        x <- c(
+            "1992ApJ...400L...1W",
+            "1995ApJ...438..387R",
+            "1974MNRAS.168..249B"
+        )
+
+        testthat::expect_identical(
+            is_bibcode(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_bibcode rejects wrong length, all-dot journal, and non-letter tails",
+    {
+        x <- c(
+            "1992ApJ...400L...1W",
+            "1992ApJ...400L...1",
+            "1992ApJ...400L...1WX",
+            "1992.....400L...1W",
+            "not-a-bibcode",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_bibcode(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_bibcode for type bibcode",
+    {
+        x <- c("1992ApJ...400L...1W", "1992.....400L...1W", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "bibcode"),
+            is_bibcode(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "bibcode normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "1992ApJ...400L...1W",
+            "https://ui.adsabs.harvard.edu/abs/1992ApJ...400L...1W",
+            "bibcode:1995ApJ...438..387R",
+            "1992ApJ...400L...1W."
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "bibcode"),
+            c(
+                "1992ApJ...400L...1W",
+                "1992ApJ...400L...1W",
+                "1995ApJ...438..387R",
+                "1992ApJ...400L...1W"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized bibcode outputs validate and classify as bibcode",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://ui.adsabs.harvard.edu/abs/1992ApJ...400L...1W",
+                "bibcode: 1995ApJ...438..387R"
+            ),
+            "bibcode"
+        )
+
+        testthat::expect_true(all(is_bibcode(x)))
+        testthat::expect_true(all(is_scholid(x, "bibcode")))
+        testthat::expect_true(all(classify_scholid(x) == "bibcode"))
+    }
+)
+
+testthat::test_that(
+    "is_ark accepts canonical ark:/NAAN/Name identifiers",
+    {
+        x <- c(
+            "ark:/12148/btv1b8449691v",
+            "ark:/13030/654xz321",
+            "ark:/12148/btv1b8449691v/f29"
+        )
+
+        testthat::expect_identical(
+            is_ark(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_ark rejects bare paths, short NAANs, and malformed values",
+    {
+        x <- c(
+            "ark:/12148/btv1b8449691v",
+            "12148/btv1b8449691v",
+            "ark:/1234/btv1b8449691v",
+            "ark:/12148/",
+            "not-an-ark",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_ark(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_ark for type ark",
+    {
+        x <- c("ark:/13030/654xz321", "12148/btv1b8449691v", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "ark"),
+            is_ark(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "ARK normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "ark:/12148/btv1b8449691v",
+            "https://n2t.net/ark:/12148/btv1b8449691v",
+            "ark:13030/654xz321",
+            "ark:/12148/btv1b8449691v/f29."
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "ark"),
+            c(
+                "ark:/12148/btv1b8449691v",
+                "ark:/12148/btv1b8449691v",
+                "ark:/13030/654xz321",
+                "ark:/12148/btv1b8449691v/f29"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized ARK outputs validate and classify as ark",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://n2t.net/ark:/13030/654xz321",
+                "ark:12148/btv1b8449691v"
+            ),
+            "ark"
+        )
+
+        testthat::expect_true(all(is_ark(x)))
+        testthat::expect_true(all(is_scholid(x, "ark")))
+        testthat::expect_true(all(classify_scholid(x) == "ark"))
+    }
+)
+
+testthat::test_that(
+    "is_uniprot accepts canonical uppercase UniProtKB accessions",
+    {
+        x <- c(
+            "P12345",
+            "Q9H0H5",
+            "A0A022YWF9",
+            "O75882"
+        )
+
+        testthat::expect_identical(
+            is_uniprot(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_uniprot rejects URLs, lowercase, short tails, and RRID-like strings",
+    {
+        x <- c(
+            "P12345",
+            "https://www.uniprot.org/uniprot/P04637",
+            "p12345",
+            "P123",
+            "RRID:AB_262044",
+            "not-uniprot",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_uniprot(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_uniprot for type uniprot",
+    {
+        x <- c("P12345", "p12345", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "uniprot"),
+            is_uniprot(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "UniProt normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "P12345",
+            "https://www.uniprot.org/uniprot/P04637",
+            "https://identifiers.org/uniprot/Q9H0H5",
+            "uniprot:A0A022YWF9",
+            "p12345",
+            "P123",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "uniprot"),
+            c(
+                "P12345",
+                "P04637",
+                "Q9H0H5",
+                "A0A022YWF9",
+                "P12345",
+                NA_character_,
+                NA_character_
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized UniProt outputs validate and classify as uniprot",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.uniprot.org/uniprot/P04637",
+                "uniprot:Q9H0H5"
+            ),
+            "uniprot"
+        )
+
+        testthat::expect_true(all(is_uniprot(x)))
+        testthat::expect_true(all(is_scholid(x, "uniprot")))
+        testthat::expect_true(all(classify_scholid(x) == "uniprot"))
+    }
+)
+
+testthat::test_that(
+    "is_refseq accepts canonical uppercase RefSeq accessions with version",
+    {
+        x <- c(
+            "NM_001744.6",
+            "NP_001735.1",
+            "NC_003619.1",
+            "NZ_CASIGT010000001.1"
+        )
+
+        testthat::expect_identical(
+            is_refseq(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_refseq rejects URLs, lowercase, missing version, and RRID-like strings",
+    {
+        x <- c(
+            "NM_001744.6",
+            "https://www.ncbi.nlm.nih.gov/nuccore/NM_001744.6",
+            "nm_001744.6",
+            "NM_001744",
+            "RRID:AB_262044",
+            "not-refseq",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_refseq(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_refseq for type refseq",
+    {
+        x <- c("NM_001744.6", "nm_001744.6", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "refseq"),
+            is_refseq(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "RefSeq normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "NM_001744.6",
+            "https://www.ncbi.nlm.nih.gov/nuccore/NM_001744.6",
+            "https://www.ncbi.nlm.nih.gov/protein/NP_001735.1",
+            "https://identifiers.org/refseq/NC_003619.1",
+            "refseq:NM_021964.7",
+            "nm_001744.6",
+            "NM_001744",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "refseq"),
+            c(
+                "NM_001744.6",
+                "NM_001744.6",
+                "NP_001735.1",
+                "NC_003619.1",
+                "NM_021964.7",
+                "NM_001744.6",
+                NA_character_,
+                NA_character_
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized RefSeq outputs validate and classify as refseq",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/nuccore/NM_001744.6",
+                "refseq:NP_001735.1"
+            ),
+            "refseq"
+        )
+
+        testthat::expect_true(all(is_refseq(x)))
+        testthat::expect_true(all(is_scholid(x, "refseq")))
+        testthat::expect_true(all(classify_scholid(x) == "refseq"))
+    }
+)
+
+testthat::test_that(
+    "is_sra accepts canonical uppercase SRA accessions",
+    {
+        x <- c(
+            "SRR1553610",
+            "SRX1234567",
+            "SRP006081",
+            "ERR1234567",
+            "DRR1234567"
+        )
+
+        testthat::expect_identical(
+            is_sra(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_sra rejects URLs, lowercase, short tails, and RefSeq-like strings",
+    {
+        x <- c(
+            "SRR1553610",
+            "https://www.ncbi.nlm.nih.gov/sra/SRR1553610",
+            "srr1553610",
+            "SRR123",
+            "NM_001744.6",
+            "not-sra",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_sra(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_sra for type sra",
+    {
+        x <- c("SRR1553610", "srr1553610", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "sra"),
+            is_sra(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "SRA normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "SRR1553610",
+            "https://www.ncbi.nlm.nih.gov/sra/SRR1553610",
+            "https://identifiers.org/sra/SRX1234567",
+            "sra:SRP006081",
+            "srr1553610",
+            "SRR123",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "sra"),
+            c(
+                "SRR1553610",
+                "SRR1553610",
+                "SRX1234567",
+                "SRP006081",
+                "SRR1553610",
+                NA_character_,
+                NA_character_
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized SRA outputs validate and classify as sra",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/sra/SRR1553610",
+                "sra:SRX1234567"
+            ),
+            "sra"
+        )
+
+        testthat::expect_true(all(is_sra(x)))
+        testthat::expect_true(all(is_scholid(x, "sra")))
+        testthat::expect_true(all(classify_scholid(x) == "sra"))
+    }
+)
+
+testthat::test_that(
+    "is_geo accepts canonical uppercase GEO accessions",
+    {
+        x <- c(
+            "GSE2553",
+            "GSM313800",
+            "GPL96",
+            "GDS505"
+        )
+
+        testthat::expect_identical(
+            is_geo(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_geo rejects URLs, lowercase, short tails, and SRA-like strings",
+    {
+        x <- c(
+            "GSE2553",
+            "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2553",
+            "gse2553",
+            "GSE1",
+            "SRR1553610",
+            "not-geo",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_geo(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_geo for type geo",
+    {
+        x <- c("GSE2553", "gse2553", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "geo"),
+            is_geo(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "GEO normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "GSE2553",
+            "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2553",
+            "https://identifiers.org/geo/GSM313800",
+            "geo:GPL96",
+            "gse2553",
+            "GSE1",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "geo"),
+            c(
+                "GSE2553",
+                "GSE2553",
+                "GSM313800",
+                "GPL96",
+                "GSE2553",
+                NA_character_,
+                NA_character_
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized GEO outputs validate and classify as geo",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2553",
+                "geo:GSM313800"
+            ),
+            "geo"
+        )
+
+        testthat::expect_true(all(is_geo(x)))
+        testthat::expect_true(all(is_scholid(x, "geo")))
+        testthat::expect_true(all(classify_scholid(x) == "geo"))
+    }
+)
+
+testthat::test_that(
+    "is_bioproject accepts canonical uppercase BioProject accessions",
+    {
+        x <- c(
+            "PRJNA257197",
+            "PRJEB12345",
+            "PRJDB303",
+            "PRJDA1234"
+        )
+
+        testthat::expect_identical(
+            is_bioproject(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_bioproject rejects URLs, lowercase, short tails, and GEO-like strings",
+    {
+        x <- c(
+            "PRJNA257197",
+            "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197",
+            "prjna257197",
+            "PRJNA1",
+            "PRJXX12345",
+            "GSE2553",
+            "not-bioproject",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_bioproject(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_bioproject for type bioproject",
+    {
+        x <- c("PRJNA257197", "prjna257197", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "bioproject"),
+            is_bioproject(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "BioProject normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "PRJNA257197",
+            "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197",
+            "https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJEB12345",
+            "https://identifiers.org/bioproject/PRJDB303",
+            "bioproject:PRJDA1234",
+            "prjna257197",
+            "PRJNA1",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "bioproject"),
+            c(
+                "PRJNA257197",
+                "PRJNA257197",
+                "PRJEB12345",
+                "PRJDB303",
+                "PRJDA1234",
+                "PRJNA257197",
+                NA_character_,
+                NA_character_
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized BioProject outputs validate and classify as bioproject",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197",
+                "bioproject:PRJEB12345"
+            ),
+            "bioproject"
+        )
+
+        testthat::expect_true(all(is_bioproject(x)))
+        testthat::expect_true(all(is_scholid(x, "bioproject")))
+        testthat::expect_true(all(classify_scholid(x) == "bioproject"))
+    }
+)
+
+testthat::test_that(
+    "is_assembly accepts canonical uppercase GCA and GCF accessions with version",
+    {
+        x <- c(
+            "GCF_000001405.40",
+            "GCA_000001405.29",
+            "GCA_009914755.4"
+        )
+
+        testthat::expect_identical(
+            is_assembly(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_assembly rejects URLs, lowercase, missing version, and RefSeq-like strings",
+    {
+        x <- c(
+            "GCF_000001405.40",
+            "https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.40",
+            "gcf_000001405.40",
+            "GCF_000001405",
+            "GCF_12345.1",
+            "NM_001744.6",
+            "not-assembly",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_assembly(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "classify_scholid distinguishes assembly from RefSeq accessions",
+    {
+        x <- c("GCF_000001405.40", "NM_001744.6")
+
+        got <- classify_scholid(x)
+
+        testthat::expect_identical(
+            got,
+            c("assembly", "refseq")
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_assembly for type assembly",
+    {
+        x <- c("GCF_000001405.40", "gcf_000001405.40", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "assembly"),
+            is_assembly(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "assembly normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "GCF_000001405.40",
+            "https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.40",
+            "https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_009914755.4/",
+            "https://identifiers.org/insdc.gcf:GCF_000001405.40",
+            "assembly:GCA_000001405.29",
+            "gcf_000001405.40",
+            "GCF_000001405",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "assembly"),
+            c(
+                "GCF_000001405.40",
+                "GCF_000001405.40",
+                "GCA_009914755.4",
+                "GCF_000001405.40",
+                "GCA_000001405.29",
+                "GCF_000001405.40",
+                NA_character_,
+                NA_character_
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized assembly outputs validate and classify as assembly",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.40",
+                "assembly:GCA_000001405.29"
+            ),
+            "assembly"
+        )
+
+        testthat::expect_true(all(is_assembly(x)))
+        testthat::expect_true(all(is_scholid(x, "assembly")))
+        testthat::expect_true(all(classify_scholid(x) == "assembly"))
+    }
+)
+
+testthat::test_that(
+    "is_isni accepts canonical compact checksum-valid ISNIs",
+    {
+        x <- c(
+            "000000012146438X",
+            "000000012124423X",
+            "0000000080456315"
+        )
+
+        testthat::expect_identical(
+            is_isni(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_isni rejects hyphenated ORCID form, bad checksums, and malformed values",
+    {
+        x <- c(
+            "000000012146438X",
+            "0000-0002-1825-0097",
+            "000000012146438A",
+            "00000001214643800",
+            "not-an-isni",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_isni(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_isni for type isni",
+    {
+        x <- c("000000012146438X", "0000-0002-1825-0097", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "isni"),
+            is_isni(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "ISNI normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "000000012146438X",
+            "https://isni.org/isni/000000012124423X",
+            "ISNI 0000 0001 2146 438X",
+            "urn:isni:000000012146438X"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "isni"),
+            c(
+                "000000012146438X",
+                "000000012124423X",
+                "000000012146438X",
+                "000000012146438X"
+            )
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized ISNI outputs validate and classify as isni",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://isni.org/isni/000000012124423X",
+                "ISNI 0000 0001 2146 438X"
+            ),
+            "isni"
+        )
+
+        testthat::expect_true(all(is_isni(x)))
+        testthat::expect_true(all(is_scholid(x, "isni")))
+        testthat::expect_true(all(classify_scholid(x) == "isni"))
+    }
+)
+
+testthat::test_that(
+    "compact checksum-valid strings classify as isni and hyphenated strings as orcid",
+    {
+        x <- c(
+            "000000012146438X",
+            "0000-0002-1825-0097"
+        )
+
+        got <- classify_scholid(x)
+
+        testthat::expect_identical(
+            got,
+            c("isni", "orcid")
+        )
+    }
+)
+
+testthat::test_that(
+    "is_openalex accepts canonical uppercase keys for known entity types",
+    {
+        x <- c(
+            "W2741809807",
+            "A5023888391",
+            "I97018004",
+            "S137773608",
+            "T154945302",
+            "F4320332160",
+            "G12345678",
+            "K12345678",
+            "P12345678"
+        )
+
+        testthat::expect_identical(
+            is_openalex(x),
+            rep(TRUE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_openalex rejects UniProt-shaped 6-character accessions",
+    {
+        x <- c(
+            "P12345",
+            "Q9H0H5"
+        )
+
+        testthat::expect_identical(
+            is_openalex(x),
+            rep(FALSE, length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "is_openalex rejects lowercase keys, short tails, and deprecated prefixes",
+    {
+        x <- c(
+            "W2741809807",
+            "w2741809807",
+            "W123",
+            "C12345678",
+            "X12345678",
+            "not-an-openalex-id",
+            NA_character_
+        )
+
+        testthat::expect_identical(
+            is_openalex(x),
+            c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, NA)
+        )
+    }
+)
+
+testthat::test_that(
+    "is_scholid dispatches to is_openalex for type openalex",
+    {
+        x <- c("W2741809807", "w2741809807", NA_character_)
+
+        testthat::expect_identical(
+            is_scholid(x, "openalex"),
+            is_openalex(x)
+        )
+    }
+)
+
+testthat::test_that(
+    "OpenAlex normalization canonicalizes valid labeled and URL inputs",
+    {
+        x <- c(
+            "W2741809807",
+            "https://openalex.org/W2741809807",
+            "https://api.openalex.org/works/W2741809807",
+            "w2741809807"
+        )
+
+        testthat::expect_identical(
+            normalize_scholid(x, "openalex"),
+            rep("W2741809807", length(x))
+        )
+    }
+)
+
+testthat::test_that(
+    "normalized OpenAlex outputs validate and classify as openalex",
+    {
+        x <- normalize_scholid(
+            c(
+                "https://openalex.org/W2741809807",
+                "https://api.openalex.org/authors/A5023888391",
+                "i97018004"
+            ),
+            "openalex"
+        )
+
+        testthat::expect_identical(
+            x,
+            c("W2741809807", "A5023888391", "I97018004")
+        )
+        testthat::expect_true(all(is_openalex(x)))
+        testthat::expect_true(all(is_scholid(x, "openalex")))
+        testthat::expect_true(all(classify_scholid(x) == "openalex"))
+    }
+)
+
+testthat::test_that(
     "is_isbn validates ISBN-10 and ISBN-13 checksums",
     {
         x <- c(
