@@ -40,6 +40,22 @@ testthat::test_that("classify_scholid classifies canonical identifiers", {
 })
 
 testthat::test_that(
+    "classify_scholid classifies upper, lower, and mixed-case DOIs",
+    {
+        x <- c(
+            "10.1000/ABC",
+            "10.1000/abc",
+            "10.1000/AbC"
+        )
+
+        testthat::expect_identical(
+            classify_scholid(x),
+            c("doi", "doi", "doi")
+        )
+    }
+)
+
+testthat::test_that(
     "classify_scholid classifies canonical ROR iDs",
     {
         x <- c(
@@ -581,5 +597,65 @@ testthat::test_that(
         got <- classify_scholid(x)
 
         testthat::expect_true(all(is.na(got)))
+    }
+)
+
+testthat::test_that(
+    "cross-type: normalized values classify at or before their type",
+    {
+        types <- scholid_types()
+        for (t in types) {
+            got <- normalize_scholid(
+                scholid_type_inputs[[t]],
+                t
+            )
+            kept <- got[!is.na(got)]
+            cls <- classify_scholid(kept)
+            pos <- match(cls, types)
+            rank <- match(t, types)
+            ok <- isTRUE(all(!is.na(cls))) &&
+                isTRUE(all(pos <= rank))
+            testthat::expect_true(
+                ok,
+                info = t
+            )
+        }
+    }
+)
+
+testthat::test_that(
+    "classify_scholid rejects invisible characters",
+    {
+        testthat::expect_identical(
+            classify_scholid("10.1000/\u200B182"),
+            NA_character_
+        )
+        testthat::expect_identical(
+            classify_scholid("\uFEFF"),
+            NA_character_
+        )
+
+        swh <- paste0(
+            "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2",
+            ";origin=https://ex\u200Bample.org"
+        )
+        testthat::expect_identical(
+            classify_scholid(swh),
+            NA_character_
+        )
+
+        for (t in names(scholid_invisible_ids)) {
+            id <- scholid_invisible_ids[[t]]
+            dirty <- scholid_invisible_variants(id)
+            got <- classify_scholid(c(id, dirty))
+            exp <- c(
+                t,
+                rep(NA_character_, length(dirty))
+            )
+            testthat::expect_true(
+                identical(got, exp),
+                info = t
+            )
+        }
     }
 )

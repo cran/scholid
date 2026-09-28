@@ -889,14 +889,15 @@ testthat::test_that(
     {
         x <- c(
             "0000000218250097",
-            "20493630",
+            "2049-3630",
+            "ISSN 20493630",
             "9780306406157",
             "12345678"
         )
 
         testthat::expect_identical(
             detect_scholid_type(x),
-            c("isni", "issn", "isbn", "pmid")
+            c("isni", "issn", "issn", "isbn", "pmid")
         )
     }
 )
@@ -906,12 +907,56 @@ testthat::test_that(
     {
         x <- c(
             "12345678",
-            "PMID: 12345678"
+            "PMID: 12345678",
+            "20493630",
+            "29456894",
+            "17170141"
         )
 
         testthat::expect_identical(
             detect_scholid_type(x),
-            c("pmid", "pmid")
+            c("pmid", "pmid", "pmid", "pmid", "pmid")
         )
+    }
+)
+
+testthat::test_that(
+    "detect_scholid_type strips invisible characters",
+    {
+        testthat::expect_identical(
+            detect_scholid_type("\uFEFF10.1000/182"),
+            "doi"
+        )
+        testthat::expect_identical(
+            detect_scholid_type("10.1000/\u200B182"),
+            "doi"
+        )
+        testthat::expect_identical(
+            detect_scholid_type(
+                "\uFEFF0000-0002-1825-0097"
+            ),
+            "orcid"
+        )
+
+        ascii <- c(
+            "10.1000/182",
+            "0000-0002-1825-0097",
+            "PMC1234567",
+            "12345678"
+        )
+        testthat::expect_identical(
+            detect_scholid_type(ascii),
+            c("doi", "orcid", "pmcid", "pmid")
+        )
+
+        for (t in names(scholid_invisible_ids)) {
+            id <- scholid_invisible_ids[[t]]
+            dirty <- scholid_invisible_variants(id)
+            got <- detect_scholid_type(c(id, dirty))
+            testthat::expect_true(
+                identical(got, rep(t, length(got))),
+                info = t
+            )
+        }
     }
 )

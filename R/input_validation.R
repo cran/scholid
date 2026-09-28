@@ -200,11 +200,149 @@
 }
 
 
+#' Characters that are never part of a canonical identifier
+#'
+#' @description
+#' U+00AD, U+200B-U+200F, U+202A-U+202E, U+2060-U+2064,
+#' U+2066-U+2069, and U+FEFF. Validators reject values that contain
+#' one of them. Normalization and extraction remove them before matching.
+#'
+#' @return A character vector of those characters.
+#'
+#' @noRd
+.scholid_invisible_chars <- function() {
+    c(
+        "\u00AD",
+        "\u200B",
+        "\u200C",
+        "\u200D",
+        "\u200E",
+        "\u200F",
+        "\u202A",
+        "\u202B",
+        "\u202C",
+        "\u202D",
+        "\u202E",
+        "\u2060",
+        "\u2061",
+        "\u2062",
+        "\u2063",
+        "\u2064",
+        "\u2066",
+        "\u2067",
+        "\u2068",
+        "\u2069",
+        "\uFEFF"
+    )
+}
+
+
+#' Values that can hold an invisible character
+#'
+#' @description
+#' Selects non-missing values that contain a non-ASCII byte and are valid
+#' UTF-8 after `enc2utf8()`. The byte scan uses `useBytes = TRUE`, so
+#' ASCII-only input is handled with one pass. Values that are not valid
+#' UTF-8 are skipped, because `gsub()` fails on them when other values are
+#' UTF-8, and `grepl()` warns once per call.
+#'
+#' @param x A character vector.
+#'
+#' @return A list with `idx`, the selected positions in `x`, and `y`, the
+#'   UTF-8 values at those positions.
+#'
+#' @noRd
+.scholid_invisible_candidates <- function(x) {
+    idx <- which(!is.na(x))
+    if (length(idx)) {
+        non_ascii <- grepl(
+            "[^\\x01-\\x7F]",
+            x[idx],
+            perl     = TRUE,
+            useBytes = TRUE
+        )
+        idx <- idx[non_ascii]
+    }
+
+    y <- enc2utf8(x[idx])
+    valid <- validUTF8(y)
+
+    list(
+        idx = idx[valid],
+        y   = y[valid]
+    )
+}
+
+
+#' Whether values contain an invisible character
+#'
+#' @description
+#' Missing values, and values that are not valid UTF-8, are reported as not
+#' containing one.
+#'
+#' @param x A character vector.
+#'
+#' @return A logical vector the same length as `x`.
+#'
+#' @noRd
+.scholid_has_invisible <- function(x) {
+    hit <- rep(FALSE, length(x))
+    cand <- .scholid_invisible_candidates(x)
+    if (!length(cand$idx)) {
+        return(hit)
+    }
+
+    found <- rep(FALSE, length(cand$y))
+    for (ch in .scholid_invisible_chars()) {
+        found <- found | grepl(
+            ch,
+            cand$y,
+            fixed = TRUE
+        )
+    }
+    hit[cand$idx] <- found
+    hit
+}
+
+
+#' Remove invisible characters
+#'
+#' @description
+#' Drops the characters from `.scholid_invisible_chars()`. Missing values,
+#' ASCII-only values, and values that are not valid UTF-8 are returned
+#' unchanged.
+#'
+#' @param x A character vector.
+#'
+#' @return A character vector the same length as `x`.
+#'
+#' @noRd
+.scholid_strip_invisible <- function(x) {
+    cand <- .scholid_invisible_candidates(x)
+    if (!length(cand$idx)) {
+        return(x)
+    }
+
+    y <- cand$y
+    for (ch in .scholid_invisible_chars()) {
+        y <- gsub(
+            ch,
+            "",
+            y,
+            fixed = TRUE
+        )
+    }
+    x[cand$idx] <- y
+    x
+}
+
+
 #' Initialize a logical output vector with NA for non-missing inputs
 #'
 #' @description
 #' Internal helper for vectorized validators. Coerces input to character and
-#' prepares a logical output vector with `NA` for missing values.
+#' prepares a logical output vector with `NA` for missing values. Values that
+#' contain an invisible character are not ok, and their output is `FALSE`.
 #'
 #' @param x A vector of values to validate.
 #'
@@ -213,10 +351,20 @@
 #' @noRd
 .scholid_init_na_logical <- function(x) {
     x <- as.character(x)
+    ok <- !is.na(x)
+    out <- rep(NA, length(x))
+    if (any(ok)) {
+        bad <- .scholid_has_invisible(x[ok])
+        if (any(bad)) {
+            bad_idx <- which(ok)[bad]
+            out[bad_idx] <- FALSE
+            ok[bad_idx] <- FALSE
+        }
+    }
     list(
         x   = x,
-        out = rep(NA, length(x)),
-        ok  = !is.na(x)
+        out = out,
+        ok  = ok
     )
 }
 
@@ -226,7 +374,7 @@
 #' @description
 #' Internal helper for vectorized normalizers. Coerces input to character and
 #' prepares a character output vector with `NA_character_` for missing
-#' values.
+#' values. Invisible characters are removed from non-missing values first.
 #'
 #' @param x A vector of values to normalize.
 #'
@@ -235,9 +383,13 @@
 #' @noRd
 .scholid_init_na_character <- function(x) {
     x <- as.character(x)
+    ok <- !is.na(x)
+    if (any(ok)) {
+        x[ok] <- .scholid_strip_invisible(x[ok])
+    }
     list(
         x   = x,
         out = rep(NA_character_, length(x)),
-        ok  = !is.na(x)
+        ok  = ok
     )
 }

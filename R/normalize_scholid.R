@@ -15,7 +15,11 @@
 #' Use [is_scholid()] to test whether already-canonical values are valid
 #' identifiers of a given type. Both functions apply checksum verification
 #' where applicable; normalization additionally accepts wrapped input forms
-#' and returns canonical strings.
+#' and returns canonical strings. Invisible characters, such as a soft
+#' hyphen or a byte order mark, are removed before normalization. For DOI
+#' case, see "Validation in scholid" in the DOI section of the *How
+#' Scholarly Identifiers Are Defined* vignette
+#' (`vignette("scholid_definitions", package = "scholid")`).
 #'
 #' @param x A vector of values to normalize.
 #' @param type A single string giving the identifier type. See
@@ -71,7 +75,7 @@ normalize_doi <- function(x) {
     y <- sub("^https?://(dx\\.)?doi\\.org/", "", y, ignore.case = TRUE)
     y <- sub("[[:punct:]]+$", "", y)
 
-    keep <- vapply(y, .is_doi_strict, logical(1))
+    keep <- .is_doi_strict(y)
     y[!keep] <- NA_character_
 
     init$out[init$ok] <- y
@@ -128,18 +132,15 @@ normalize_swhid <- function(x) {
     y <- gsub("[[:space:]]+", "", y)
     y <- sub("[.,;:!?]+$", "", y)
 
-    y <- vapply(y, function(val) {
-        if (is.na(val) || !nzchar(val)) {
-            return(NA_character_)
-        }
-
-        val <- .canonicalize_swhid(val)
-        if (is_swhid(val)) {
-            val
-        } else {
-            NA_character_
-        }
-    }, character(1))
+    todo <- !is.na(y) & nzchar(y)
+    if (any(todo)) {
+        canon <- .canonicalize_swhid(y[todo])
+        good <- is_swhid(canon)
+        good[is.na(good)] <- FALSE
+        canon[!good] <- NA_character_
+        y[todo] <- canon
+    }
+    y[!todo] <- NA_character_
 
     init$out[init$ok] <- y
     init$out
@@ -169,18 +170,15 @@ normalize_ark <- function(x) {
     has_marker <- grepl("(?i)ark:", y, perl = TRUE)
     y[!has_marker] <- NA_character_
 
-    y <- vapply(y, function(val) {
-        if (is.na(val) || !nzchar(val)) {
-            return(NA_character_)
-        }
-
-        val <- .canonicalize_ark(val)
-        if (is_ark(val)) {
-            val
-        } else {
-            NA_character_
-        }
-    }, character(1))
+    todo <- !is.na(y) & nzchar(y)
+    if (any(todo)) {
+        canon <- .canonicalize_ark(y[todo])
+        good <- is_ark(canon)
+        good[is.na(good)] <- FALSE
+        canon[!good] <- NA_character_
+        y[todo] <- canon
+    }
+    y[!todo] <- NA_character_
 
     init$out[init$ok] <- y
     init$out
@@ -723,30 +721,23 @@ normalize_rrid <- function(x) {
 normalize_isbn <- function(x) {
     init <- .scholid_init_na_character(x)
 
-    init$out[init$ok] <- vapply(init$x[init$ok], function(s) {
-        s <- trimws(s)
-        s <- .strip_isbn_label(s)
+    s <- trimws(init$x[init$ok])
+    s <- .strip_isbn_label(s)
+    out <- rep(NA_character_, length(s))
+    fmt <- .isbn_format_ok(s)
 
-        if (!.isbn_format_ok(s)) {
-            return(NA_character_)
+    if (any(fmt)) {
+        compact <- toupper(gsub("[- ]", "", s[fmt]))
+        shape <- grepl("^\\d{9}[0-9X]$", compact) |
+            grepl("^\\d{13}$", compact)
+        valid <- rep(FALSE, length(compact))
+        if (any(shape)) {
+            valid[shape] <- is_isbn(compact[shape])
         }
+        out[which(fmt)[valid]] <- compact[valid]
+    }
 
-        y <- toupper(gsub("[- ]", "", s))
-
-        is10 <- grepl("^\\d{9}[0-9X]$", y)
-        is13 <- grepl("^\\d{13}$", y)
-
-        if (!(is10 || is13)) {
-            return(NA_character_)
-        }
-
-        if (!is_isbn(y)) {
-            return(NA_character_)
-        }
-
-        y
-    }, character(1))
-
+    init$out[init$ok] <- out
     init$out
 }
 

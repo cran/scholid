@@ -1889,3 +1889,172 @@ testthat::test_that(
         )
     }
 )
+
+testthat::test_that(
+    "cross-type: extract_scholid returns validated tokens",
+    {
+        text <- scholid_extract_texts
+        na_text <- is.na(text)
+        for (t in scholid_types()) {
+            got <- extract_scholid(
+                text,
+                t
+            )
+            na_ok <- all(vapply(
+                got[na_text],
+                function(tokens) {
+                    identical(tokens, character(0))
+                },
+                logical(1)
+            ))
+            token_ok <- all(vapply(
+                got,
+                function(tokens) {
+                    if (!length(tokens)) {
+                        return(TRUE)
+                    }
+                    isTRUE(all(is_scholid(tokens, t)))
+                },
+                logical(1)
+            ))
+            ok <- is.list(got) &&
+                length(got) == length(text) &&
+                na_ok &&
+                token_ok
+            testthat::expect_true(
+                ok,
+                info = t
+            )
+        }
+    }
+)
+
+testthat::test_that(
+    "extract_scholid strips invisible characters before matching",
+    {
+        got_pmc <- extract_scholid(
+            c(
+                "see PMC123\u200B4567 here",
+                "see 10.1000/182 here",
+                NA_character_
+            ),
+            "pmcid"
+        )
+        testthat::expect_identical(
+            got_pmc[[1]],
+            "PMC1234567"
+        )
+        testthat::expect_identical(
+            got_pmc[[2]],
+            character(0)
+        )
+        testthat::expect_identical(
+            got_pmc[[3]],
+            character(0)
+        )
+
+        got_pmid <- extract_scholid(
+            "see 1234\u200B5678 here",
+            "pmid"
+        )
+        testthat::expect_identical(
+            got_pmid[[1]],
+            "12345678"
+        )
+
+        got_shy <- extract_scholid(
+            "see 1234\u00AD5678 here",
+            "pmid"
+        )
+        testthat::expect_identical(
+            got_shy[[1]],
+            "12345678"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_scholid joins tokens split by invisible characters",
+    {
+        for (t in names(scholid_invisible_ids)) {
+            id <- scholid_invisible_ids[[t]]
+            dirty <- scholid_invisible_variants(id)
+            text <- paste0(
+                "see ",
+                c(id, dirty),
+                " here"
+            )
+            got <- extract_scholid(
+                text,
+                t
+            )
+            ok <- all(vapply(
+                got,
+                function(tokens) {
+                    identical(tokens, id)
+                },
+                logical(1)
+            ))
+            testthat::expect_true(
+                ok,
+                info = t
+            )
+        }
+    }
+)
+
+testthat::test_that(
+    "extract_scholid keeps working when one text is not valid UTF-8",
+    {
+        bad <- "\xff see 10.1000/181"
+        Encoding(bad) <- "UTF-8"
+        text <- c(
+            "see 10.1000/182 here",
+            bad,
+            "café see 10.1000/183 here",
+            "see 10.1000/​184 here"
+        )
+
+        # The invalid element itself may warn in the regex engine; only the
+        # valid elements are pinned here.
+        got <- suppressWarnings(extract_scholid(
+            text,
+            "doi"
+        ))
+
+        testthat::expect_length(
+            got,
+            4L
+        )
+        testthat::expect_identical(
+            got[[1]],
+            "10.1000/182"
+        )
+        testthat::expect_identical(
+            got[[3]],
+            "10.1000/183"
+        )
+        testthat::expect_identical(
+            got[[4]],
+            "10.1000/184"
+        )
+    }
+)
+
+testthat::test_that(
+    "extract_scholid strips a soft hyphen from latin1 text",
+    {
+        text <- "see PMC123\xad4567 here"
+        Encoding(text) <- "latin1"
+
+        got <- extract_scholid(
+            text,
+            "pmcid"
+        )
+
+        testthat::expect_identical(
+            got[[1]],
+            "PMC1234567"
+        )
+    }
+)
